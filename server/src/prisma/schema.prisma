@@ -1,0 +1,15 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model GameState {
+  id        Int    @id @default(autoincrement())
+  playerId  String @unique
+  state     Json
+  createdAt DateTime @default(now())
+}
