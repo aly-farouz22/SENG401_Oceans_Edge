@@ -3,23 +3,23 @@ import { FishCatch } from "./FishingZone";
 
 export type MarketChoice = "sell" | "end_season" | "cancel";
 
-/**
- * A dock/market zone. When the boat enters, a menu appears offering:
- *   Sell    — sell inventory, stay in season
- *   End Season — sell inventory AND advance the season
- *   Cancel  — do nothing
- *
- * Call showMenu() to display it; it auto-hides on choice.
- * onChoice fires with the player's selection.
- */
 export default class MarketZone extends Phaser.GameObjects.Zone {
   private glowRect:   Phaser.GameObjects.Rectangle;
   private glowBorder: Phaser.GameObjects.Rectangle;
   private label:      Phaser.GameObjects.Text;
 
-  // Menu UI
-  private menuContainer: Phaser.GameObjects.Container;
-  private isMenuOpen = false;
+  private overlay:       Phaser.GameObjects.Rectangle;
+  private panel:         Phaser.GameObjects.Rectangle;
+  private panelBorder:   Phaser.GameObjects.Rectangle;
+  private titleText:     Phaser.GameObjects.Text;
+  private subtitleText:  Phaser.GameObjects.Text;
+  private btnSell:       Phaser.GameObjects.Text;
+  private btnEndSeason:  Phaser.GameObjects.Text;
+  private btnCancel:     Phaser.GameObjects.Text;
+  private divider:       Phaser.GameObjects.Rectangle;
+
+  private _menuOpen = false;
+  get menuOpen() { return this._menuOpen; }
 
   onChoice?: (choice: MarketChoice, inventory: FishCatch[]) => void;
 
@@ -49,29 +49,49 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
       stroke: "#332200", strokeThickness: 3, fontFamily: "monospace",
     }).setOrigin(0.5, 1).setDepth(10);
 
-    // Build the menu (hidden by default)
-    this.menuContainer = this.buildMenu(scene, x, y);
+    this.buildOverlay(scene);
   }
 
-  private buildMenu(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
-    const W = 220, H = 160;
-    const container = scene.add.container(x, y - 120).setDepth(50).setVisible(false);
+  private buildOverlay(scene: Phaser.Scene) {
+    const cam   = scene.cameras.main;
+    const cx    = cam.width  / 2;
+    const cy    = cam.height / 2;
+    const PW    = 360;
+    const PH    = 280;
+    const DEPTH = 100;
 
-    // Panel background
-    const bg = scene.add.rectangle(0, 0, W, H, 0x001a2e, 0.95)
-      .setStrokeStyle(2, 0xffcc44, 1);
+    // Dark dimmed background
+    this.overlay = scene.add.rectangle(cx, cy, cam.width, cam.height, 0x000000, 0.65)
+      .setScrollFactor(0).setDepth(DEPTH).setVisible(false).setInteractive();
 
-    const title = scene.add.text(0, -H / 2 + 16, "🏪 Market", {
-      fontSize: "15px", fontStyle: "bold", color: "#ffdd88",
-      fontFamily: "monospace", stroke: "#000", strokeThickness: 3,
-    }).setOrigin(0.5);
+    // Panel
+    this.panel = scene.add.rectangle(cx, cy, PW, PH, 0x001a2e, 1)
+      .setScrollFactor(0).setDepth(DEPTH + 1).setVisible(false);
 
-    const sellBtn    = this.makeButton(scene,  0, -18, "Sell Fish",   "#44ff88", "sell");
-    const seasonBtn  = this.makeButton(scene,  0,  28, "End Season",  "#ffaa44", "end_season");
-    const cancelBtn  = this.makeButton(scene,  0,  64, "Cancel",      "#ff6666", "cancel");
+    this.panelBorder = scene.add.rectangle(cx, cy, PW, PH)
+      .setStrokeStyle(2, 0xffcc44, 1).setFillStyle(0, 0)
+      .setScrollFactor(0).setDepth(DEPTH + 2).setVisible(false);
 
-    container.add([bg, title, sellBtn, seasonBtn, cancelBtn]);
-    return container;
+    // Title
+    this.titleText = scene.add.text(cx, cy - 100, "🏪 Market Dock", {
+      fontSize: "22px", fontStyle: "bold", color: "#ffdd88",
+      fontFamily: "monospace", stroke: "#000", strokeThickness: 4,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 3).setVisible(false);
+
+    // Subtitle (shows inventory summary)
+    this.subtitleText = scene.add.text(cx, cy - 60, "", {
+      fontSize: "13px", color: "#a0e8ff",
+      fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 3).setVisible(false);
+
+    // Divider
+    this.divider = scene.add.rectangle(cx, cy - 36, PW - 40, 1, 0xffcc44, 0.4)
+      .setScrollFactor(0).setDepth(DEPTH + 3).setVisible(false);
+
+    // Buttons
+    this.btnSell = this.makeButton(scene, cx, cy - 10, "💰  Sell Fish", "#44ff88", DEPTH + 3);
+    this.btnEndSeason = this.makeButton(scene, cx, cy + 60, "🌿  End Season & Sell", "#ffaa44", DEPTH + 3);
+    this.btnCancel = this.makeButton(scene, cx, cy + 115, "✖  Cancel", "#ff6666", DEPTH + 3);
   }
 
   private makeButton(
@@ -79,70 +99,74 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     x: number, y: number,
     label: string,
     color: string,
-    choice: MarketChoice
+    depth: number
   ): Phaser.GameObjects.Text {
-    const btn = scene.add.text(x, y, label, {
-      fontSize: "14px", color,
+    return scene.add.text(x, y, label, {
+      fontSize: "16px", color,
       fontFamily: "monospace",
       stroke: "#000", strokeThickness: 3,
-      backgroundColor: "#0a2233",
-      padding: { x: 14, y: 6 },
+      backgroundColor: "#0a2a3a",
+      padding: { x: 24, y: 10 },
     })
     .setOrigin(0.5)
+    .setScrollFactor(0)
+    .setDepth(depth)
+    .setVisible(false)
     .setInteractive({ useHandCursor: true })
-    .on("pointerover",  () => btn.setAlpha(0.75))
-    .on("pointerout",   () => btn.setAlpha(1))
-    .on("pointerdown",  () => {
-      this.hideMenu();
-      // Pass current inventory snapshot via callback
-      this.onChoice?.(choice, []);
-    });
-    return btn;
+    .on("pointerover",  function(this: Phaser.GameObjects.Text) { this.setAlpha(0.75); })
+    .on("pointerout",   function(this: Phaser.GameObjects.Text) { this.setAlpha(1); });
   }
 
-  /** Show the market menu. Pass the current inventory so Cancel can restore it. */
   showMenu(inventory: FishCatch[]) {
-    if (this.isMenuOpen) return;
-    this.isMenuOpen = true;
+    if (this._menuOpen) return;
+    this._menuOpen = true;
 
-    // Patch the buttons to carry the live inventory reference
-    const buttons = (this.menuContainer.list as Phaser.GameObjects.Text[])
-      .filter(obj => obj instanceof Phaser.GameObjects.Text && obj.text !== "🏪 Market");
+    // Update subtitle with inventory info
+    const total = inventory.reduce((s, f) => s + f.points, 0);
+    const count = inventory.length;
+    this.subtitleText.setText(
+      count > 0
+        ? `You have ${count} fish worth $${total}`
+        : "Your inventory is empty"
+    );
 
-    buttons.forEach(btn => {
-      btn.removeAllListeners("pointerdown");
-      const choice = (
-        btn.text === "Sell Fish"   ? "sell" :
-        btn.text === "End Season"  ? "end_season" : "cancel"
-      ) as MarketChoice;
-      btn.on("pointerdown", () => {
-        this.hideMenu();
-        this.onChoice?.(choice, inventory);
-      });
-    });
+    // Wire up buttons with current inventory
+    this.btnSell.removeAllListeners("pointerdown");
+    this.btnEndSeason.removeAllListeners("pointerdown");
+    this.btnCancel.removeAllListeners("pointerdown");
 
-    this.menuContainer.setVisible(true).setAlpha(0);
+    this.btnSell.on("pointerdown", () => { this.hideMenu(); this.onChoice?.("sell", inventory); });
+    this.btnEndSeason.on("pointerdown", () => { this.hideMenu(); this.onChoice?.("end_season", inventory); });
+    this.btnCancel.on("pointerdown", () => { this.hideMenu(); this.onChoice?.("cancel", inventory); });
+
+    // Show all elements
+    const all = [this.overlay, this.panel, this.panelBorder, this.titleText,
+                 this.subtitleText, this.divider, this.btnSell, this.btnEndSeason, this.btnCancel];
+    all.forEach(el => el.setVisible(true).setAlpha(0));
+
     this.scene.tweens.add({
-      targets: this.menuContainer,
-      alpha: 1, y: this.menuContainer.y - 10,
-      duration: 200, ease: "Cubic.easeOut",
+      targets: all,
+      alpha: 1,
+      duration: 200,
+      ease: "Cubic.easeOut",
     });
   }
 
   hideMenu() {
-    if (!this.isMenuOpen) return;
-    this.isMenuOpen = false;
+    if (!this._menuOpen) return;
+    this._menuOpen = false;
+
+    const all = [this.overlay, this.panel, this.panelBorder, this.titleText,
+                 this.subtitleText, this.divider, this.btnSell, this.btnEndSeason, this.btnCancel];
+
     this.scene.tweens.add({
-      targets: this.menuContainer,
+      targets: all,
       alpha: 0,
       duration: 150,
-      onComplete: () => this.menuContainer.setVisible(false),
+      onComplete: () => all.forEach(el => el.setVisible(false)),
     });
   }
 
-  get menuOpen() { return this.isMenuOpen; }
-
-  /** Sell all fish and return the total earned. */
   sellAll(inventory: FishCatch[]): number {
     return inventory.reduce((sum, f) => sum + f.points, 0);
   }
@@ -151,7 +175,15 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     this.label?.destroy();
     this.glowRect?.destroy();
     this.glowBorder?.destroy();
-    this.menuContainer?.destroy();
+    this.overlay?.destroy();
+    this.panel?.destroy();
+    this.panelBorder?.destroy();
+    this.titleText?.destroy();
+    this.subtitleText?.destroy();
+    this.divider?.destroy();
+    this.btnSell?.destroy();
+    this.btnEndSeason?.destroy();
+    this.btnCancel?.destroy();
     super.destroy(fromScene);
   }
 }
