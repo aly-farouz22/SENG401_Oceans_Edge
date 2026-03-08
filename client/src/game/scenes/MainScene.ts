@@ -4,12 +4,14 @@ import FishingZone from "../objects/FishingZone";
 import HUD from "../objects/HUD";
 import MarketZone from "../objects/MarketZone";
 import SeasonManager from "../objects/SeasonManager";
+import { EcosystemSystem } from "../systems/EconomySystem";
 
 export default class MainScene extends Phaser.Scene {
   private boat!:          Boat;
   private hud!:           HUD;
   private seasonManager!: SeasonManager;
   private fishingZones:   FishingZone[] = [];
+  private ecosystem!: EcosystemSystem;
 
   constructor() {
     super("MainScene");
@@ -21,11 +23,26 @@ export default class MainScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor("#0a3d6b");
-
+    this.ecosystem = new EcosystemSystem;
     this.fishingZones = [
-      new FishingZone(this, 200, 250, 100, 100, "Shallow Reef"),
-      new FishingZone(this, 700, 500, 120, 120, "Deep Waters"),
-      new FishingZone(this, 450, 620, 90,  90,  "Coral Bed"),
+      new FishingZone(this, 200, 250, 100, 100, "Shallow Reef", {
+        fishType: "Salmon",
+        fishAmount: 50,
+        isJuvenile: false,
+        endangered: false,
+      }),
+      new FishingZone(this, 700, 500, 120, 120, "Deep Waters", {
+        fishType: "Tuna",
+        fishAmount: 30,
+        isJuvenile: true,
+        endangered: false,
+      }),
+      new FishingZone(this, 450, 620, 90, 90, "Coral Bed", {
+        fishType: "Bluefin",
+        fishAmount: 50,
+        isJuvenile: false,
+        endangered: true,
+      }),
     ];
 
     const marketZones = [
@@ -34,10 +51,10 @@ export default class MainScene extends Phaser.Scene {
 
 
 
-    this.seasonManager = new SeasonManager(this);
+    this.seasonManager = new SeasonManager(this, this.ecosystem);
     this.seasonManager.registerZones(this.fishingZones);
 
-    this.boat = new Boat(this, 500, 384);
+    this.boat = new Boat(this, 500, 384, this.ecosystem);
     this.boat.registerZones(this.fishingZones);
     this.boat.registerMarketZones(marketZones);
 
@@ -65,7 +82,7 @@ export default class MainScene extends Phaser.Scene {
       this.boat.money,
       this.boat.fish,
       this.seasonManager.season,
-      this.seasonManager.seasonName
+      this.seasonManager.seasonName, ecosystemState
     );
     this.fishingZones
       .filter(z => !z.isGone)
