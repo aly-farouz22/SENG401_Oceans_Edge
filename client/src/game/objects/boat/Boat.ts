@@ -4,11 +4,13 @@ import MarketZone from "../MarketZone";
 import BoatFishing from "./BoatFishing";
 import BoatInventory from "./BoatInventory";
 import BoatMovement from "./BoatMovement";
+import { EcosystemSystem, FishSpecies } from "../../systems/EconomySystem";
 
 export default class Boat extends Phaser.Physics.Arcade.Sprite {
   private movement:  BoatMovement;
   private fishing:   BoatFishing;
   readonly inventory: BoatInventory;
+  private ecosystem: EcosystemSystem;
 
   get money() { return this.inventory.money; }
   get fish()  { return this.inventory.fish;  }
@@ -25,16 +27,33 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
   private zoneOverlaps: Map<FishingZone, number> = new Map();
   private marketOverlaps = 0;
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, ecosystem: EcosystemSystem) {
     super(scene, x, y, "boat");
     scene.add.existing(this);
     scene.physics.add.existing(this);
-
+    this.ecosystem = ecosystem;
     this.movement  = new BoatMovement(scene, this);
     this.fishing   = new BoatFishing(scene, this);
     this.inventory = new BoatInventory(scene, this);
 
-    this.fishing.onCatch = (fish) => this.inventory.addFish(fish);
+    this.fishing.onCatch = (fish) => {
+      this.inventory.addFish(fish);
+      const amountCaught = fish.amount;
+      const ecosystemFish: FishSpecies | undefined = this.ecosystem.getState().fishPopulations.find(
+        f => f.name === fish.name
+      );
+      if (ecosystemFish) {
+        this.ecosystem.harvestFish(fish.name, amountCaught);
+        if (fish.isJuvenile) {
+          ecosystemFish.regeneartionRate *= 0.9;
+          console.log('Caught Juvenile ${fish.name}: Regeneration Reduced!')
+        }
+        if (fish.endangered) {
+          ecosystemFish.population -= amountCaught * 0.5;
+          console.log('Caught Endangered ${fish.name}: Extra Population Loss!')
+        }
+      }
+    }
   }
 
   registerZones(zones: FishingZone[]) {

@@ -1,6 +1,9 @@
 import Phaser from "phaser";
 
 export interface FishCatch {
+  endangered: any;
+  isJuvenile: any;
+  amount: any;
   name: string;
   rarity: "common" | "uncommon" | "rare" | "legendary";
   points: number;
