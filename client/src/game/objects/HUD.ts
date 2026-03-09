@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { FishCatch } from "./FishingZone";
+import { EcosystemState } from "../systems/EconomySystem";
 
 export default class HUD {
   private scene: Phaser.Scene;
@@ -8,6 +9,7 @@ export default class HUD {
   private inventoryText: Phaser.GameObjects.Text;
   private sellFeedback: Phaser.GameObjects.Text;
   private panel: Phaser.GameObjects.Rectangle;
+  private ecosystemText: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -22,6 +24,10 @@ export default class HUD {
       .setScrollFactor(0)
       .setDepth(20);
 
+    this.ecosystemText = scene.add.text(px, py + 80, "🌊 Ecosystem: Healthy", {
+        fontSize: "13px", color: "#a0ffaa", fontFamily: "monospace",
+        stroke: "#000", strokeThickness: 2
+    }).setScrollFactor(0).setDepth(21);
     this.moneyText = scene.add
       .text(px, py, "💰 $0", {
         fontSize: "18px",
@@ -72,7 +78,7 @@ export default class HUD {
       .setVisible(false);
   }
 
-  update(money: number, inventory: FishCatch[], season = 1, seasonName = "Spring") {
+  update(money: number, inventory: FishCatch[], season = 1, seasonName = "Spring", ecosystemState?: EcosystemState) {
     this.moneyText.setText(`💰 $${money.toLocaleString()}`);
 
     this.seasonText.setText(`🌿 Season ${season} — ${seasonName}`);
@@ -87,6 +93,11 @@ export default class HUD {
         .map(([r, n]) => `${n} ${r}`)
         .join("  ");
       this.inventoryText.setText(`🐠 ${inventory.length} fish  (${summary})`);
+    }
+    if (ecosystemState) {
+      const {coralHealth, acidity, fishPopulations} = ecosystemState;
+      const fishInfo = fishPopulations.map(f => `${f.name}: ${f.population}`).join(", ");
+      
     }
   }
 

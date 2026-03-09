@@ -82,7 +82,8 @@ export default class MainScene extends Phaser.Scene {
       this.boat.money,
       this.boat.fish,
       this.seasonManager.season,
-      this.seasonManager.seasonName, ecosystemState
+      this.seasonManager.seasonName,
+      this.ecosystem.getState()
     );
     this.fishingZones
       .filter(z => !z.isGone)
