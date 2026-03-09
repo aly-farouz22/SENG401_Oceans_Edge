@@ -97,7 +97,7 @@ export default class HUD {
     if (ecosystemState) {
       const {coralHealth, acidity, fishPopulations} = ecosystemState;
       const fishInfo = fishPopulations.map(f => `${f.name}: ${f.population}`).join(", ");
-      
+      this.ecosystemText.setText(`Coral: ${coralHealth} | pH: ${acidity.toFixed(2)} | Fish: ${fishInfo}`);
     }
   }
 
@@ -141,5 +141,24 @@ export default class HUD {
         this.sellFeedback.setVisible(false).setY(this.scene.cameras.main.height / 2 - 60);
       },
     });
+  }
+  // Display alert for juvenile/endangered fish
+  displayWarning(message: string) {
+    const cam = this.scene.cameras.main;
+    const warning = this.scene.add.text(cam.width / 2, cam.height / 2 - 100, message, message, {
+      fontSize: "20px", fontStyle: "bold", fontFamily: "monospace",
+      color: "#ff4444", stroke: "#000", strokeThickness: 4
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(50).setAlpha(0);
+    this.scene.tweens.add({
+      targets: warning,
+      alpha: { from: 0, to: 1},
+      y: warning.y - 20,
+      duration: 400,
+      ease: "Cubic.easeOut",
+      yoyo: true,
+      hold: 1200,
+      onComplete: () => warning.destroy(),
+
+    })
   }
 }
