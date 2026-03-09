@@ -4,7 +4,7 @@ import MarketZone from "../MarketZone";
 import BoatFishing from "./BoatFishing";
 import BoatInventory from "./BoatInventory";
 import BoatMovement from "./BoatMovement";
-import { EcosystemSystem, FishSpecies } from "../../systems/EconomySystem";
+import { EcosystemSystem, FishSpecies } from "../../systems/EcosystemSystem";
 
 export default class Boat extends Phaser.Physics.Arcade.Sprite {
   private movement:  BoatMovement;
