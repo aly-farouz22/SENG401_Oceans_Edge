@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import BootScene from "./scenes/BootScene";
 import MainScene from "./scenes/MainScene";
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
@@ -10,5 +11,5 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     default: "arcade",
     arcade: { debug: false }
   },
-  scene: [MainScene]
+  scene: [BootScene, MainScene]
 };
