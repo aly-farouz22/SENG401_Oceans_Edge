@@ -4,7 +4,7 @@ import FishingZone from "../objects/FishingZone";
 import HUD from "../objects/HUD";
 import MarketZone from "../objects/MarketZone";
 import SeasonManager from "../objects/SeasonManager";
-import { EcosystemSystem } from "../systems/EconomySystem";
+import { EcosystemSystem } from "../systems/EcosystemSystem";
 
 export default class MainScene extends Phaser.Scene {
   private boat!:          Boat;
