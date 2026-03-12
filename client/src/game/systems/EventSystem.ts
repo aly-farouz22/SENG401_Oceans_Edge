@@ -61,14 +61,34 @@ export class EventSystem {
 
 
     // trigger when fish population gets too low
-public checkLowPopulationEvent(): EventResult | null {
-    const ecosystemState = this.ecosystem.getState();
-    const fishPopulations = ecosystemState.fishPopulations;
+    public checkLowPopulationEvent(): EventResult | null {
+        const ecosystemState = this.ecosystem.getState();
+        const fishPopulations = ecosystemState.fishPopulations;
 
-    const lowFish = fishPopulations.find(fish => fish.population <= 50);
+        const lowFish = fishPopulations.find(fish => fish.population <= 50);
 
-    if (!lowFish) {
-        return null;
+        if (!lowFish) {
+            return null;
+        }
+        // Make the critically low species endangered and regenerate slower
+        lowFish.endangered = true;
+        lowFish.regeneartionRate -= 0.01;
+
+        if (lowFish.regeneartionRate < 0) {
+        lowFish.regeneartionRate = 0;
+        }
+
+        ecosystemState.coralHealth -= 10;
+        if (ecosystemState.coralHealth < 0) {
+            ecosystemState.coralHealth = 0;
+        }
+
+
+            return {
+            title: "Fish Population Crisis",
+            description: `${lowFish.name} population is critically low. Coral health decreased, regeneration slowed, and more species are now endangered.`
+        };
     }
-}
+
+
 }
