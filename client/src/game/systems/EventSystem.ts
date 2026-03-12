@@ -9,7 +9,6 @@ export interface EventResult {
 export class EventSystem {
     private economy: EconomySystem;
     private ecosystem: EcosystemSystem;
-    private lastEvent: EventResult | null = null;
 
     constructor(economy: EconomySystem, ecosystem: EcosystemSystem) {
         this.economy = economy;
@@ -17,11 +16,12 @@ export class EventSystem {
     }
 
 
-
+ // randomly trigger any event
     public triggerRandomEvent(): EventResult {
+        //roll from 0 to 3 for 4 possible events, change if more events are added later
         const roll = Math.floor(Math.random() * 4);
         let result: EventResult;
-
+        // Event effects are subject to change based on balance testing
         switch (roll) {
             case 0:
                 this.ecosystem.addPollution(10);
@@ -58,4 +58,17 @@ export class EventSystem {
 
         return result;
     }
+
+
+    // trigger when fish population gets too low
+public checkLowPopulationEvent(): EventResult | null {
+    const ecosystemState = this.ecosystem.getState();
+    const fishPopulations = ecosystemState.fishPopulations;
+
+    const lowFish = fishPopulations.find(fish => fish.population <= 50);
+
+    if (!lowFish) {
+        return null;
+    }
+}
 }
