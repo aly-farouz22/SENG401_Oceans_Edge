@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { FishCatch } from "./FishingZone";
 
-export type MarketChoice = "sell" | "end_season" | "cancel";
+export type MarketChoice = "sell" | "upgrade" | "end_season" | "cancel";
 
 export default class MarketZone extends Phaser.GameObjects.Zone {
   private glowRect:   Phaser.GameObjects.Rectangle;
@@ -16,6 +16,7 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
   private btnSell!:       Phaser.GameObjects.Text;
   private btnEndSeason!:  Phaser.GameObjects.Text;
   private btnCancel!:     Phaser.GameObjects.Text;
+  private btnUpgrade!:     Phaser.GameObjects.Text;
   private divider!:       Phaser.GameObjects.Rectangle;
 
   private _menuOpen = false;
@@ -89,7 +90,8 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
       .setScrollFactor(0).setDepth(DEPTH + 3).setVisible(false);
 
     // Buttons
-    this.btnSell = this.makeButton(scene, cx, cy - 10, "💰  Sell Fish", "#44ff88", DEPTH + 3);
+    this.btnSell = this.makeButton(scene, cx, cy - 30, "💰  Sell Fish", "#44ff88", DEPTH + 3);
+    this.btnUpgrade = this.makeButton(scene, cx, cy + 10, "⚙  Buy Upgrades", "#66ccff", DEPTH + 3);
     this.btnEndSeason = this.makeButton(scene, cx, cy + 60, "🌿  End Season & Sell", "#ffaa44", DEPTH + 3);
     this.btnCancel = this.makeButton(scene, cx, cy + 115, "✖  Cancel", "#ff6666", DEPTH + 3);
   }
@@ -134,14 +136,16 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     this.btnSell.removeAllListeners("pointerdown");
     this.btnEndSeason.removeAllListeners("pointerdown");
     this.btnCancel.removeAllListeners("pointerdown");
+    this.btnUpgrade.removeAllListeners("pointerdown");
 
     this.btnSell.on("pointerdown", () => { this.hideMenu(); this.onChoice?.("sell", inventory); });
     this.btnEndSeason.on("pointerdown", () => { this.hideMenu(); this.onChoice?.("end_season", inventory); });
     this.btnCancel.on("pointerdown", () => { this.hideMenu(); this.onChoice?.("cancel", inventory); });
+    this.btnUpgrade.on("pointerdown", () => { this.hideMenu(); this.onChoice?.("upgrade", inventory); });
 
     // Show all elements
     const all = [this.overlay, this.panel, this.panelBorder, this.titleText,
-                 this.subtitleText, this.divider, this.btnSell, this.btnEndSeason, this.btnCancel];
+                 this.subtitleText, this.divider, this.btnSell, this.btnUpgrade, this.btnEndSeason, this.btnCancel];
     all.forEach(el => el.setVisible(true).setAlpha(0));
 
     this.scene.tweens.add({
@@ -157,7 +161,7 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     this._menuOpen = false;
 
     const all = [this.overlay, this.panel, this.panelBorder, this.titleText,
-                 this.subtitleText, this.divider, this.btnSell, this.btnEndSeason, this.btnCancel];
+                 this.subtitleText, this.divider, this.btnSell, this.btnUpgrade,this.btnEndSeason, this.btnCancel];
 
     this.scene.tweens.add({
       targets: all,
@@ -182,6 +186,7 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     this.subtitleText?.destroy();
     this.divider?.destroy();
     this.btnSell?.destroy();
+    this.btnUpgrade?.destroy();
     this.btnEndSeason?.destroy();
     this.btnCancel?.destroy();
     super.destroy(fromScene);
