@@ -64,9 +64,9 @@ export default class HUD {
     }
 
     if (ecosystemState) {
-      const { coralHealth, acidity, fishPopulations } = ecosystemState;
+      const { coralHealth, acidityLevel, fishPopulations } = ecosystemState;
       const coralStr = coralHealth != null ? `Coral: ${coralHealth}` : "";
-      const acidStr  = acidity     != null ? `pH: ${acidity.toFixed(2)}` : "";
+      const acidStr  = acidityLevel     != null ? `pH: ${acidityLevel.toFixed(2)}` : "";
       const fishStr  = fishPopulations?.length
         ? fishPopulations.map(f => `${f.name}: ${f.population}`).join(", ")
         : "";
