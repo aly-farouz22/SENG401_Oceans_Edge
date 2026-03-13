@@ -11,32 +11,43 @@ export default class MainScene extends Phaser.Scene {
   private hud!:           HUD;
   private seasonManager!: SeasonManager;
   private fishingZones:   FishingZone[] = [];
-  private ecosystem!: EcosystemSystem;
-  private marketZones: MarketZone[] = [];
+  private ecosystem!:     EcosystemSystem;
+  private marketZones:    MarketZone[] = [];
 
-  constructor() {
-    super("MainScene");
-  }
+  constructor() { super("MainScene"); }
 
   preload() {
-    this.load.image("boat", "/assets/boat.png");
+    this.load.image("boat",           "/assets/boat.png");
+    this.load.image("fish_anchovy",   "/assets/Anchovy_Sprat_Common.png");
+    this.load.image("fish_aurora",    "/assets/Aurora_Trout_Endangered.png");
+    this.load.image("fish_crab",      "/assets/European_Green_Crab_Invasive.png");
+    this.load.image("fish_haddock",   "/assets/Haddock_Common.png");
+    this.load.image("fish_lionfish",  "/assets/Lionfish_Invasive.png");
+    this.load.image("fish_swordfish", "/assets/North_Atlantic_Swordfish_Common.png");
+    this.load.image("fish_opah",      "/assets/Opah_Fish_Common.png");
+    this.load.image("fish_halibut",   "/assets/Pacific_Halibut_Common.png");
+    this.load.image("fish_snapper",   "/assets/Red_Snapper_Common.png");
+    this.load.image("fish_bluefin",   "/assets/Southern_Bluefin_Tuna_Endangered.png");
+    this.load.image("upgrade_fuel",   "/assets/Fuel_Upgrade.png");
+    this.load.image("upgrade_net",    "/assets/Net_Upgrade.png");
+    this.load.image("trash_bottle",   "/assets/water_bottle_trash__1_.png");
+    this.load.image("trash_cigarette","/assets/Cigarette_Buds_Trash.png");
   }
 
   create() {
     this.cameras.main.setBackgroundColor("#0a3d6b");
+
     this.ecosystem = new EcosystemSystem();
+
     this.fishingZones = [
       new FishingZone(this, 150, 200, 100, 100, "Shallow Reef"),
       new FishingZone(this, 400, 300, 120, 120, "Deep Waters"),
       new FishingZone(this, 650, 250, 140, 140, "Coral Bed"),
-        
     ];
 
     this.marketZones = [
       new MarketZone(this, 880, 120, 120, 80, "Market Dock"),
     ];
-    this.boat.registerMarketZones(this.marketZones);
-
 
     this.seasonManager = new SeasonManager(this, this.ecosystem);
     this.seasonManager.registerZones(this.fishingZones);
@@ -47,12 +58,10 @@ export default class MainScene extends Phaser.Scene {
 
     this.hud = new HUD(this);
 
-    // Sold fish but stayed in season
     this.boat.onSell = (earned, count) => {
       this.hud.showSellFeedback(earned, count);
     };
 
-    // Sold fish AND ended the season
     this.boat.onEndSeason = (earned, count) => {
       this.hud.showSellFeedback(earned, count);
       this.seasonManager.advanceSeason();
@@ -65,6 +74,7 @@ export default class MainScene extends Phaser.Scene {
 
   update(time: number, delta: number) {
     this.boat.update();
+    this.seasonManager.update(delta);
     this.hud.update(
       this.boat.money,
       this.boat.fish,
