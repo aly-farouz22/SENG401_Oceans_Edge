@@ -30,7 +30,7 @@ export default class BoatUpgrade {
                 cost: 1000,
                 level: 0,
                 levelMax: 3,
-                effect: (boat) => {boat.movement.catchMultiplier = 1 + 0.15 * boat.upgrades.returnLevel("Engine Boost")}
+                effect: (boat) => {boat.movement.speedMultiplier = 1 + 0.15 * boat.upgrades.returnLevel("Engine Boost")}
             },
             {
                 name: "Eco Filter",
@@ -45,7 +45,7 @@ export default class BoatUpgrade {
     purchaseUpgrade(name: string) {
         const upgrade = this.upgrades.find(u => u.name === name);
         if (!upgrade) return false;
-        if (upgrade.level > upgrade.levelMax) return false;
+        if (upgrade.level >= upgrade.levelMax) return false;
         if (this.boat.money < upgrade.cost) return false;
         this.boat.money -= upgrade.cost;
         upgrade.level++;

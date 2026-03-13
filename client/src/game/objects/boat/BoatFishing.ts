@@ -107,6 +107,8 @@ export default class BoatFishing {
     const fish = this.activeZone?.castLine() ?? null;
 
     if (fish) {
+      // Catch multiplier is added
+      fish.amount *= this.catchMultiplier;
       this.showCatchPopup(fish);
       this.onCatch?.(fish);
     }

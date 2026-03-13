@@ -12,6 +12,7 @@ export default class MainScene extends Phaser.Scene {
   private seasonManager!: SeasonManager;
   private fishingZones:   FishingZone[] = [];
   private ecosystem!: EcosystemSystem;
+  private marketZones: MarketZone[] = [];
 
   constructor() {
     super("MainScene");
@@ -25,16 +26,16 @@ export default class MainScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#0a3d6b");
     this.ecosystem = new EcosystemSystem();
     this.fishingZones = [
-      new FishingZone(this, 200, 250, 100, 100, "Shallow Reef"),
-      new FishingZone(this, 200, 250, 100, 100, "Deep Waters"),
-      new FishingZone(this, 200, 250, 100, 100, "Coral Bed"),
+      new FishingZone(this, 150, 200, 100, 100, "Shallow Reef"),
+      new FishingZone(this, 400, 300, 120, 120, "Deep Waters"),
+      new FishingZone(this, 650, 250, 140, 140, "Coral Bed"),
         
     ];
 
-    const marketZones = [
+    this.marketZones = [
       new MarketZone(this, 880, 120, 120, 80, "Market Dock"),
     ];
-
+    this.boat.registerMarketZones(this.marketZones);
 
 
     this.seasonManager = new SeasonManager(this, this.ecosystem);
@@ -42,7 +43,7 @@ export default class MainScene extends Phaser.Scene {
 
     this.boat = new Boat(this, 500, 384, this.ecosystem);
     this.boat.registerZones(this.fishingZones);
-    this.boat.registerMarketZones(marketZones);
+    this.boat.registerMarketZones(this.marketZones);
 
     this.hud = new HUD(this);
 

@@ -8,15 +8,15 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
   private glowBorder: Phaser.GameObjects.Rectangle;
   private label:      Phaser.GameObjects.Text;
 
-  private overlay:       Phaser.GameObjects.Rectangle;
-  private panel:         Phaser.GameObjects.Rectangle;
-  private panelBorder:   Phaser.GameObjects.Rectangle;
-  private titleText:     Phaser.GameObjects.Text;
-  private subtitleText:  Phaser.GameObjects.Text;
-  private btnSell:       Phaser.GameObjects.Text;
-  private btnEndSeason:  Phaser.GameObjects.Text;
-  private btnCancel:     Phaser.GameObjects.Text;
-  private divider:       Phaser.GameObjects.Rectangle;
+  private overlay!:       Phaser.GameObjects.Rectangle;
+  private panel!:         Phaser.GameObjects.Rectangle;
+  private panelBorder!:   Phaser.GameObjects.Rectangle;
+  private titleText!:     Phaser.GameObjects.Text;
+  private subtitleText!:  Phaser.GameObjects.Text;
+  private btnSell!:       Phaser.GameObjects.Text;
+  private btnEndSeason!:  Phaser.GameObjects.Text;
+  private btnCancel!:     Phaser.GameObjects.Text;
+  private divider!:       Phaser.GameObjects.Rectangle;
 
   private _menuOpen = false;
   get menuOpen() { return this._menuOpen; }
