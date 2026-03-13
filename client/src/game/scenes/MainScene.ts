@@ -77,10 +77,9 @@ export default class MainScene extends Phaser.Scene {
     this.marketZones.forEach(market => {
       market.onChoice = (choice, inventory) => {
         if (choice === "upgrade") {
-          // Display availbale upgrades
-          console.table(this.boatUpgrades.displayUpgrades());
-
           const upgrades = this.boatUpgrades.displayUpgrades();
+          // Display availbale upgrades in HUD
+          this.hud.showUpgrades(upgrades);
           for (const u of upgrades) {
             if (this.boat.money >= u.cost) {
               this.boatUpgrades.purchaseUpgrade(u.name);

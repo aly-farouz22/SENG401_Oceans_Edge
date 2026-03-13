@@ -125,4 +125,40 @@ export default class HUD {
       onComplete: () => warning.destroy(),
     });
   }
+
+  // Display available upgrades in a pop-up
+  showUpgrades(upgrades: {name: string; description: string; cost: number; level: number; maxLevel: number}[]) {
+    const cam = this.scene.cameras.main;
+    const cx = cam.width /2;
+    const cy = cam.height /2;
+    // Panel background created
+    const panel = this.scene.add.rectangle(cx, cy, 400, 300, 0x001a2e, 0.9)
+        .setScrollFactor(0)
+        .setDepth(100);
+    // Title created
+    const title = this.scene.add.text(cx, cy - 130, "⚙ Boat Upgrades", {
+      fontSize: "22px", fontStyle: "bold", fontFamily: "monospace",
+      color: "#66ccff", stroke: "#000", strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(101);
+    // Upgrades are listed
+    upgrades.forEach((u,i) => {
+      this.scene.add.text(cx, cy - 90 + i * 40,
+        `${u.name} (LVL ${u.level}/${u.maxLevel}) - $${u.cost}\n${u.description}`, {
+          fontSize: "14px",
+          fontFamily: "monospace",
+          color: "#a0e8ff",
+          stroke: "#000", strokeThickness: 1,
+        }).setOrigin(0.5, 0).setDepth(101);
+    });
+    // Remove the panel after a few seconds
+    this.scene.time.delayedCall(4000, () => {
+      panel.destroy();
+      title.destroy();
+      this.scene.children.getChildren().forEach(c => {
+        if ('depth' in c && c.depth === 101) {
+          (c as Phaser.GameObjects.GameObject).destroy();
+        }
+      });
+    }); 
+  }
 }
