@@ -23,26 +23,12 @@ export default class MainScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor("#0a3d6b");
-    this.ecosystem = new EcosystemSystem;
+    this.ecosystem = new EcosystemSystem();
     this.fishingZones = [
-      new FishingZone(this, 200, 250, 100, 100, "Shallow Reef", {
-        fishType: "Salmon",
-        fishAmount: 50,
-        isJuvenile: false,
-        endangered: false,
-      }),
-      new FishingZone(this, 700, 500, 120, 120, "Deep Waters", {
-        fishType: "Tuna",
-        fishAmount: 30,
-        isJuvenile: true,
-        endangered: false,
-      }),
-      new FishingZone(this, 450, 620, 90, 90, "Coral Bed", {
-        fishType: "Bluefin",
-        fishAmount: 50,
-        isJuvenile: false,
-        endangered: true,
-      }),
+      new FishingZone(this, 200, 250, 100, 100, "Shallow Reef"),
+      new FishingZone(this, 200, 250, 100, 100, "Deep Waters"),
+      new FishingZone(this, 200, 250, 100, 100, "Coral Bed"),
+        
     ];
 
     const marketZones = [

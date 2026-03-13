@@ -30,6 +30,8 @@ export default class BoatFishing {
   private catchText:  Phaser.GameObjects.Text;
   private barBg: Phaser.GameObjects.Rectangle;
   private bar:   Phaser.GameObjects.Rectangle;
+  public catchMultiplier = 1;
+  public ecoFilterLevel = 0;
 
   onCatch?: (fish: FishCatch) => void;
 

@@ -1,4 +1,4 @@
-export interface Upgadre {
+export interface Upgrade {
     name: string;
     description: string;
     cost: number;
@@ -8,7 +8,7 @@ export interface Upgadre {
 }
 export default class BoatUpgrade {
     private boat: any;
-    private upgrades: Upgadre[] = [];
+    private upgrades: Upgrade[] = [];
     constructor(boat: any) {
         this.boat = boat;
         this.initializeUpgrades();
@@ -22,7 +22,7 @@ export default class BoatUpgrade {
                 cost: 500,
                 level: 0,
                 levelMax: 3,
-                effect: (boat) => {boat.fishing.catchMultiplier = 1 + 0.2 * boat.upgrades.getLevel("Stronger Net")}
+                effect: (boat) => {boat.fishing.catchMultiplier = 1 + 0.2 * boat.upgrades.returnLevel("Stronger Net")}
             },
             {
                 name: "Engine Boost",
@@ -30,7 +30,7 @@ export default class BoatUpgrade {
                 cost: 1000,
                 level: 0,
                 levelMax: 3,
-                effect: (boat) => {boat.movement.catchMultiplier = 1 + 0.15 * boat.upgrades.getLevel("Engine Boost")}
+                effect: (boat) => {boat.movement.catchMultiplier = 1 + 0.15 * boat.upgrades.returnLevel("Engine Boost")}
             },
             {
                 name: "Eco Filter",
@@ -38,7 +38,7 @@ export default class BoatUpgrade {
                 cost: 750,
                 level: 0,
                 levelMax: 2,
-                effect: (boat) => {boat.fishing.ecoFilterLevel = boat.upgrades.getLevel("Eco Filter")}
+                effect: (boat) => {boat.fishing.ecoFilterLevel = boat.upgrades.returnLevel("Eco Filter")}
             },
         ];
     }

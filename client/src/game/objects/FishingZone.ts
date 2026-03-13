@@ -10,14 +10,14 @@ export interface FishCatch {
 }
 
 const FISH_TABLE: FishCatch[] = [
-  { name: "Sardine",       rarity: "common",    points: 5   },
-  { name: "Mackerel",      rarity: "common",    points: 10  },
-  { name: "Herring",       rarity: "common",    points: 8   },
-  { name: "Bass",          rarity: "uncommon",  points: 25  },
-  { name: "Snapper",       rarity: "uncommon",  points: 30  },
-  { name: "Tuna",          rarity: "rare",      points: 75  },
-  { name: "Swordfish",     rarity: "rare",      points: 100 },
-  { name: "Golden Marlin", rarity: "legendary", points: 500 },
+  { name: "Sardine",       rarity: "common",    points: 5, endangered: false , isJuvenile: false , amount: 1  },
+  { name: "Mackerel",      rarity: "common",    points: 10, endangered: false , isJuvenile: false , amount: 1  },
+  { name: "Herring",       rarity: "common",    points: 8, endangered: false , isJuvenile: false , amount: 1   },
+  { name: "Bass",          rarity: "uncommon",  points: 25, endangered: false , isJuvenile: false , amount: 1  },
+  { name: "Snapper",       rarity: "uncommon",  points: 30, endangered: false , isJuvenile: false , amount: 1  },
+  { name: "Tuna",          rarity: "rare",      points: 75, endangered: false , isJuvenile: false , amount: 1  },
+  { name: "Swordfish",     rarity: "rare",      points: 100, endangered: false , isJuvenile: false , amount: 1 },
+  { name: "Golden Marlin", rarity: "legendary", points: 500, endangered: false , isJuvenile: false , amount: 1 },
 ];
 
 const RARITY_WEIGHTS = { common: 60, uncommon: 25, rare: 12, legendary: 3 };
@@ -157,14 +157,16 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
 
     const color = pct > 0.5
       ? Phaser.Display.Color.Interpolate.ColorWithColor(
-          { r: 255, g: 221, b: 0 }   as Phaser.Display.Color,
-          { r: 0,   g: 221, b: 136 } as Phaser.Display.Color,
-          100, Math.round((pct - 0.5) * 200)
+          Phaser.Display.Color.ValueToColor(0xffdd00),
+          Phaser.Display.Color.ValueToColor(0x00dd88),
+          100, 
+          Math.round((pct - 0.5) * 200)
         )
       : Phaser.Display.Color.Interpolate.ColorWithColor(
-          { r: 255, g: 68,  b: 0 }   as Phaser.Display.Color,
-          { r: 255, g: 221, b: 0 }   as Phaser.Display.Color,
-          100, Math.round(pct * 200)
+        Phaser.Display.Color.ValueToColor(0xff4400),
+        Phaser.Display.Color.ValueToColor(0xffdd00),
+        100, 
+        Math.round(pct * 200)
         );
 
     this.barFill.setFillStyle(

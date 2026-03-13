@@ -10,6 +10,7 @@ const SPEED = 200;
 export default class BoatMovement {
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
   private sprite: Phaser.Physics.Arcade.Sprite;
+  public speedMultiplier = 1;
 
   constructor(scene: Phaser.Scene, sprite: Phaser.Physics.Arcade.Sprite) {
     this.sprite = sprite;

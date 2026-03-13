@@ -5,6 +5,7 @@ import BoatFishing from "./BoatFishing";
 import BoatInventory from "./BoatInventory";
 import BoatMovement from "./BoatMovement";
 import { EcosystemSystem, FishSpecies } from "../../systems/EcosystemSystem";
+import BoatUpgrade from "./BoatUpgrade";
 
 export default class Boat extends Phaser.Physics.Arcade.Sprite {
   private movement:  BoatMovement;
@@ -27,6 +28,7 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
   private zoneOverlaps: Map<FishingZone, number> = new Map();
   private marketOverlaps = 0;
 
+  readonly upgrades: BoatUpgrade;
   constructor(scene: Phaser.Scene, x: number, y: number, ecosystem: EcosystemSystem) {
     super(scene, x, y, "boat");
     scene.add.existing(this);
@@ -35,6 +37,7 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
     this.movement  = new BoatMovement(scene, this);
     this.fishing   = new BoatFishing(scene, this);
     this.inventory = new BoatInventory(scene, this);
+    this.upgrades = new BoatUpgrade(this);
 
     this.fishing.onCatch = (fish) => {
       this.inventory.addFish(fish);
