@@ -5,6 +5,7 @@ import HUD from "../objects/HUD";
 import MarketZone from "../objects/MarketZone";
 import SeasonManager from "../objects/SeasonManager";
 import { EcosystemSystem } from "../systems/EcosystemSystem";
+import BoatUpgrade from "../objects/boat/BoatUpgrade";
 
 export default class MainScene extends Phaser.Scene {
   private boat!:          Boat;
@@ -13,6 +14,7 @@ export default class MainScene extends Phaser.Scene {
   private fishingZones:   FishingZone[] = [];
   private ecosystem!:     EcosystemSystem;
   private marketZones:    MarketZone[] = [];
+  private boatUpgrades!: BoatUpgrade;
 
   constructor() { super("MainScene"); }
 
@@ -55,6 +57,7 @@ export default class MainScene extends Phaser.Scene {
     this.boat = new Boat(this, 500, 384, this.ecosystem);
     this.boat.registerZones(this.fishingZones);
     this.boat.registerMarketZones(this.marketZones);
+    this.boatUpgrades = new BoatUpgrade(this.boat);
 
     this.hud = new HUD(this);
 
@@ -70,6 +73,23 @@ export default class MainScene extends Phaser.Scene {
     this.seasonManager.onSeasonChange = (season, seasonName) => {
       this.hud.showSeasonBanner(season, seasonName);
     };
+
+    this.marketZones.forEach(market => {
+      market.onChoice = (choice, inventory) => {
+        if (choice === "upgrade") {
+          // Display availbale upgrades
+          console.table(this.boatUpgrades.displayUpgrades());
+
+          const upgrades = this.boatUpgrades.displayUpgrades();
+          for (const u of upgrades) {
+            if (this.boat.money >= u.cost) {
+              this.boatUpgrades.purchaseUpgrade(u.name);
+              break;
+            }
+          }
+        }
+      }
+    });
   }
 
   update(time: number, delta: number) {
