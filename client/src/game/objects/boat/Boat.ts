@@ -1,66 +1,75 @@
 import Phaser from "phaser";
+import { EconomySystem } from "../../systems/EconomySystem";
+import { EcosystemSystem, FishSpecies } from "../../systems/EcosystemSystem";
 import FishingZone from "../FishingZone";
 import MarketZone from "../MarketZone";
 import BoatFishing from "./BoatFishing";
 import BoatInventory from "./BoatInventory";
 import BoatMovement from "./BoatMovement";
-import { EcosystemSystem, FishSpecies } from "../../systems/EcosystemSystem";
 import BoatUpgrade from "./BoatUpgrade";
 
-export default class Boat extends Phaser.Physics.Arcade.Sprite {
-  private movement:  BoatMovement;
-  private fishing:   BoatFishing;
-  readonly inventory: BoatInventory;
-  private ecosystem: EcosystemSystem;
+interface BoatModules {
+  movement:  BoatMovement;
+  fishing:   BoatFishing;
+  inventory: BoatInventory;
+  upgrades:  BoatUpgrade;
+  economy:   EconomySystem;
+  ecosystem: EcosystemSystem;
+}
 
-  get money() { return this.inventory.money; }
-  get fish()  { return this.inventory.fish;  }
+export default class Boat extends Phaser.Physics.Arcade.Sprite {
+  // All submodules stored in a single plain object — Phaser can't touch it
+  private _m!: BoatModules;
+
+  get money()   { return this._m.inventory.money; }
+  get fish()    { return this._m.inventory.fish;  }
+  get upgrades(){ return this._m.upgrades; }
+  get economy() { return this._m.economy; }
+  get fishing() { return this._m.fishing; }
+  get boatMovement() { return this._m.movement; }
 
   set onSell(cb: (earned: number, count: number) => void) {
-    this.inventory.onSell = cb;
+    this._m.inventory.onSell = cb;
   }
-
   set onEndSeason(cb: (earned: number, count: number) => void) {
-    this.inventory.onEndSeason = cb;
+    this._m.inventory.onEndSeason = cb;
+  }
+  set onUpgrade(cb: () => void) {
+    this._m.inventory.onUpgrade = cb;
   }
 
-  // Each zone gets its own overlap counter so we know WHICH zone is active
   private zoneOverlaps: Map<FishingZone, number> = new Map();
   private marketOverlaps = 0;
 
-  readonly upgrades: BoatUpgrade;
-  constructor(scene: Phaser.Scene, x: number, y: number, ecosystem: EcosystemSystem) {
+  constructor(scene: Phaser.Scene, x: number, y: number, ecosystem: EcosystemSystem, economy?: EconomySystem) {
     super(scene, x, y, "boat");
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    this.ecosystem = ecosystem;
-    this.movement  = new BoatMovement(scene, this);
-    this.fishing   = new BoatFishing(scene, this);
-    this.inventory = new BoatInventory(scene, this);
-    this.upgrades = new BoatUpgrade(this);
 
-    this.fishing.onCatch = (fish) => {
-      this.inventory.addFish(fish);
-      const amountCaught = fish.amount;
-      const ecosystemFish: FishSpecies | undefined = this.ecosystem.getState().fishPopulations.find(
+    const eco = economy ?? new EconomySystem();
+
+    const movement  = new BoatMovement(scene, this);
+    const fishing   = new BoatFishing(scene, this);
+    const inventory = new BoatInventory(scene, this, eco);
+    const upgrades  = new BoatUpgrade(this);
+
+    this._m = { movement, fishing, inventory, upgrades, economy: eco, ecosystem };
+
+    fishing.onCatch = (fish) => {
+      inventory.addFish(fish);
+      const ecosystemFish: FishSpecies | undefined = ecosystem.getState().fishPopulations.find(
         f => f.name === fish.name
       );
       if (ecosystemFish) {
-        this.ecosystem.harvestFish(fish.name, amountCaught);
-        if (fish.isJuvenile) {
-          ecosystemFish.regeneartionRate *= 0.9;
-          console.log('Caught Juvenile ${fish.name}: Regeneration Reduced!')
-        }
-        if (fish.endangered) {
-          ecosystemFish.population -= amountCaught * 0.5;
-          console.log('Caught Endangered ${fish.name}: Extra Population Loss!')
-        }
+        ecosystem.harvestFish(fish.name, fish.amount ?? 1);
+        if (fish.isJuvenile) ecosystemFish.regeneartionRate *= 0.9;
+        if (fish.endangered) ecosystemFish.population -= (fish.amount ?? 1) * 0.5;
       }
-    }
+    };
   }
 
   registerZones(zones: FishingZone[]) {
-    this.fishing.registerZones(zones);
+    this._m.fishing.registerZones(zones);
     zones.forEach(zone => {
       this.zoneOverlaps.set(zone, 0);
       this.scene.physics.add.overlap(this, zone, () => {
@@ -70,14 +79,13 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
   }
 
   registerMarketZones(zones: MarketZone[]) {
-    this.inventory.registerMarketZones(zones);
+    this._m.inventory.registerMarketZones(zones);
     zones.forEach(zone => {
       this.scene.physics.add.overlap(this, zone, () => { this.marketOverlaps++; });
     });
   }
 
-  update() {
-    // Find which zone the boat is currently inside (first match wins)
+  tick() {
     let activeZone: FishingZone | null = null;
     for (const [zone, count] of this.zoneOverlaps.entries()) {
       if (count > 0) { activeZone = zone; break; }
@@ -85,12 +93,11 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
 
     const isAtMarket = this.marketOverlaps > 0;
 
-    // Reset counters for next frame
     for (const zone of this.zoneOverlaps.keys()) this.zoneOverlaps.set(zone, 0);
     this.marketOverlaps = 0;
 
-    this.movement.update(this.fishing.isFishing);
-    this.fishing.update(activeZone, isAtMarket);
-    this.inventory.update(isAtMarket);
+    this._m.movement.update(this._m.fishing.isFishing);
+    this._m.fishing.update(activeZone, isAtMarket);
+    this._m.inventory.update(isAtMarket);
   }
 }

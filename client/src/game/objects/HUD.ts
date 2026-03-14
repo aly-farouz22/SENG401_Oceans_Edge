@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { EcosystemState } from "../systems/EcosystemSystem";
+import { EcosystemState } from "../systems/EcosystemSystem"; // acidityLevel, pollutionLevel, coralHealth, fishPopulations
 import { FishCatch } from "./FishingZone";
 
 export default class HUD {
@@ -64,13 +64,11 @@ export default class HUD {
     }
 
     if (ecosystemState) {
-      const { coralHealth, acidityLevel, fishPopulations } = ecosystemState;
-      const coralStr = coralHealth != null ? `Coral: ${coralHealth}` : "";
-      const acidStr  = acidityLevel     != null ? `pH: ${acidityLevel.toFixed(2)}` : "";
-      const fishStr  = fishPopulations?.length
-        ? fishPopulations.map(f => `${f.name}: ${f.population}`).join(", ")
-        : "";
-      this.ecosystemText.setText([coralStr, acidStr, fishStr].filter(Boolean).join(" | "));
+      const { coralHealth, acidityLevel, pollutionLevel, fishPopulations } = ecosystemState;
+      const coralStr = coralHealth   != null ? `🪸 ${coralHealth.toFixed(0)}%` : "";
+      const acidStr  = acidityLevel  != null ? `💧 pH ${acidityLevel.toFixed(2)}` : "";
+      const pollStr  = pollutionLevel != null ? `☣ ${pollutionLevel.toFixed(0)}%` : "";
+      this.ecosystemText.setText([coralStr, pollStr, acidStr].filter(Boolean).join("  "));
     }
   }
 
@@ -124,41 +122,5 @@ export default class HUD {
       yoyo: true, hold: 1200,
       onComplete: () => warning.destroy(),
     });
-  }
-
-  // Display available upgrades in a pop-up
-  showUpgrades(upgrades: {name: string; description: string; cost: number; level: number; maxLevel: number}[]) {
-    const cam = this.scene.cameras.main;
-    const cx = cam.width /2;
-    const cy = cam.height /2;
-    // Panel background created
-    const panel = this.scene.add.rectangle(cx, cy, 400, 300, 0x001a2e, 0.9)
-        .setScrollFactor(0)
-        .setDepth(100);
-    // Title created
-    const title = this.scene.add.text(cx, cy - 130, "⚙ Boat Upgrades", {
-      fontSize: "22px", fontStyle: "bold", fontFamily: "monospace",
-      color: "#66ccff", stroke: "#000", strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(101);
-    // Upgrades are listed
-    upgrades.forEach((u,i) => {
-      this.scene.add.text(cx, cy - 90 + i * 40,
-        `${u.name} (LVL ${u.level}/${u.maxLevel}) - $${u.cost}\n${u.description}`, {
-          fontSize: "14px",
-          fontFamily: "monospace",
-          color: "#a0e8ff",
-          stroke: "#000", strokeThickness: 1,
-        }).setOrigin(0.5, 0).setDepth(101);
-    });
-    // Remove the panel after a few seconds
-    this.scene.time.delayedCall(4000, () => {
-      panel.destroy();
-      title.destroy();
-      this.scene.children.getChildren().forEach(c => {
-        if ('depth' in c && c.depth === 101) {
-          (c as Phaser.GameObjects.GameObject).destroy();
-        }
-      });
-    }); 
   }
 }

@@ -6,14 +6,16 @@ export interface Upgrade {
     levelMax: number;
     effect: (boat: any) => void;
 }
+
 export default class BoatUpgrade {
     private boat: any;
     private upgrades: Upgrade[] = [];
+
     constructor(boat: any) {
         this.boat = boat;
         this.initializeUpgrades();
     }
-    // All upgrades are defined here
+
     private initializeUpgrades() {
         this.upgrades = [
             {
@@ -22,7 +24,9 @@ export default class BoatUpgrade {
                 cost: 500,
                 level: 0,
                 levelMax: 3,
-                effect: (boat) => {boat.fishing.catchMultiplier = 1 + 0.2 * boat.upgrades.returnLevel("Stronger Net")}
+                effect: (boat) => {
+                    boat._m.fishing.catchMultiplier = 1 + 0.2 * boat._m.upgrades.returnLevel("Stronger Net");
+                }
             },
             {
                 name: "Engine Boost",
@@ -30,7 +34,9 @@ export default class BoatUpgrade {
                 cost: 1000,
                 level: 0,
                 levelMax: 3,
-                effect: (boat) => {boat.movement.speedMultiplier = 1 + 0.15 * boat.upgrades.returnLevel("Engine Boost")}
+                effect: (boat) => {
+                    boat._m.movement.speedMultiplier = 1 + 0.15 * boat._m.upgrades.returnLevel("Engine Boost");
+                }
             },
             {
                 name: "Eco Filter",
@@ -38,34 +44,46 @@ export default class BoatUpgrade {
                 cost: 750,
                 level: 0,
                 levelMax: 2,
-                effect: (boat) => {boat.fishing.ecoFilterLevel = boat.upgrades.returnLevel("Eco Filter")}
+                effect: (boat) => {
+                    boat._m.fishing.ecoFilterLevel = boat._m.upgrades.returnLevel("Eco Filter");
+                }
             },
         ];
     }
+
     purchaseUpgrade(name: string) {
         const upgrade = this.upgrades.find(u => u.name === name);
         if (!upgrade) return false;
         if (upgrade.level >= upgrade.levelMax) return false;
-        if (this.boat.money < upgrade.cost) return false;
-        this.boat.money -= upgrade.cost;
+
+        // Deduct via EconomySystem if available, else fallback
+        const economy = this.boat._m?.economy;
+        if (economy) {
+            if (!economy.canAfford(upgrade.cost)) return false;
+            economy.addRevenue(-upgrade.cost); // deduct by adding negative
+        } else {
+            if (this.boat.money < upgrade.cost) return false;
+            this.boat.inventory._money -= upgrade.cost;
+        }
+
         upgrade.level++;
         upgrade.effect(this.boat);
         console.log(`Upgrade Purchased: ${upgrade.name} (Level ${upgrade.level})`);
         return true;
     }
-    // This method return the current level of the upgrade
+
     returnLevel(name: string) {
         const upgrade = this.upgrades.find(u => u.name === name);
         return upgrade ? upgrade.level : 0;
     }
-    // This method displays upgrade info in  HUD
+
     displayUpgrades() {
-        return this.upgrades.map( u => ({
-            name: u.name,
+        return this.upgrades.map(u => ({
+            name:        u.name,
             description: u.description,
-            cost: u.cost,
-            level: u.level,
-            maxLevel: u.levelMax
+            cost:        u.cost,
+            level:       u.level,
+            maxLevel:    u.levelMax
         }));
-    } 
+    }
 }
