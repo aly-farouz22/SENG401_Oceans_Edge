@@ -73,7 +73,7 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     const cam = scene.cameras.main;
     const cx = cam.width / 2;
     const cy = cam.height / 2;
-    const PW = 360, PH = 280, DEPTH = 100;
+    const PW = 360, PH = 350, DEPTH = 100;
 
     this.overlay = scene.add.rectangle(cx, cy, cam.width, cam.height, 0x000000, 0.65)
       .setScrollFactor(0).setDepth(DEPTH).setVisible(false).setInteractive();
@@ -97,18 +97,18 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
 
     this.divider = scene.add.rectangle(cx, cy - 36, PW - 40, 1, 0xffcc44, 0.4)
       .setScrollFactor(0).setDepth(DEPTH + 3).setVisible(false);
-
-    this.btnSell      = this.makeButton(scene, cx, cy - 30, "💰  Sell Fish",          "#44ff88", DEPTH + 3);
-    this.btnUpgrade   = this.makeButton(scene, cx, cy + 10, "⚙  Buy Upgrades",        "#66ccff", DEPTH + 3);
-    this.btnEndSeason = this.makeButton(scene, cx, cy + 60, "🌿  End Season & Sell",  "#ffaa44", DEPTH + 3);
-    this.btnCancel    = this.makeButton(scene, cx, cy + 115,"✖  Cancel",              "#ff6666", DEPTH + 3);
+    const spacing = 50;
+    this.btnSell      = this.makeButton(scene, cx, cy - spacing+40, "💰  Sell Fish",          "#44ff88", DEPTH + 3);
+    this.btnUpgrade   = this.makeButton(scene, cx, cy+40, "⚙  Buy Upgrades",        "#66ccff", DEPTH + 3);
+    this.btnEndSeason = this.makeButton(scene, cx, cy + spacing+40, "🌿  End Season & Sell",  "#ffaa44", DEPTH + 3);
+    this.btnCancel    = this.makeButton(scene, cx, cy + spacing * 2+40,"✖  Cancel",              "#ff6666", DEPTH + 3);
   }
 
   private buildUpgradePanel(scene: Phaser.Scene) {
     const cam = scene.cameras.main;
     const cx = cam.width / 2;
     const cy = cam.height / 2;
-    const PW = 460, PH = 380, DEPTH = 110;
+    const PW = 700, PH = 380, DEPTH = 110;
 
     this.upgradeOverlay = scene.add.rectangle(cx, cy, cam.width, cam.height, 0x000000, 0.75)
       .setScrollFactor(0).setDepth(DEPTH).setVisible(false).setInteractive();

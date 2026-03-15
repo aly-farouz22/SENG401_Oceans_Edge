@@ -21,7 +21,7 @@ export default class BoatUpgrade {
             {
                 name: "Stronger Net",
                 description: "Increase Catch Rate by 20%",
-                cost: 500,
+                cost: 5,
                 level: 0,
                 levelMax: 3,
                 effect: (boat) => {
@@ -31,7 +31,7 @@ export default class BoatUpgrade {
             {
                 name: "Engine Boost",
                 description: "Increase Boat Speed by 15%",
-                cost: 1000,
+                cost: 10,
                 level: 0,
                 levelMax: 3,
                 effect: (boat) => {
@@ -41,7 +41,7 @@ export default class BoatUpgrade {
             {
                 name: "Eco Filter",
                 description: "Reduce Chance Of Catching Juvenile/Endangered Fish",
-                cost: 750,
+                cost: 15,
                 level: 0,
                 levelMax: 2,
                 effect: (boat) => {

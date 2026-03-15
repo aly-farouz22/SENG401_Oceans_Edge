@@ -18,7 +18,7 @@ export default class HUD {
     const py = 12;
 
     this.panel = scene.add
-      .rectangle(px + 90, py + 44, 196, 120, 0x001a2e, 0.75)
+      .rectangle(px + 90, py + 44, 500, 120, 0x001a2e, 0.75)
       .setScrollFactor(0).setDepth(20);
 
     this.moneyText = scene.add.text(px, py, "💰 $0", {

@@ -32,7 +32,7 @@ export default class BoatInventory {
     this.marketPrompt = scene.add.text(0, 0, "Sail to dock to sell", {
       fontSize: "12px", color: "#ffdd88",
       stroke: "#332200", strokeThickness: 2, fontFamily: "monospace",
-    }).setOrigin(0.5, 1).setVisible(false).setDepth(10);
+    }).setOrigin(0.5, 0).setVisible(false).setDepth(10);
   }
 
   registerMarketZones(zones: MarketZone[]) {
@@ -85,7 +85,7 @@ export default class BoatInventory {
     const { x, y } = this.sprite;
 
     this.marketPrompt
-      .setPosition(x, y - 28)
+      .setPosition(x, y + 20)
       .setVisible(!isAtMarket && this.fish.length > 0);
 
     if (isAtMarket && !this.atMarketLastFrame) {

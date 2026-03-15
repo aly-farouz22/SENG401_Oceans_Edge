@@ -46,7 +46,7 @@ export default class MainScene extends Phaser.Scene {
     this.economy.addRevenue(0);
 
     this.fishingZones = [
-      new FishingZone(this, 150, 200, 100, 100, "Shallow Reef"),
+      new FishingZone(this, 150, 350, 100, 100, "Shallow Reef"),
       new FishingZone(this, 400, 300, 120, 120, "Deep Waters"),
       new FishingZone(this, 650, 250, 140, 140, "Coral Bed"),
     ];
