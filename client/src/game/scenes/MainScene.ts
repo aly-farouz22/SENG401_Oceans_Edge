@@ -6,6 +6,7 @@ import MarketZone from "../objects/MarketZone";
 import SeasonManager from "../objects/SeasonManager";
 import { EconomySystem } from "../systems/EconomySystem";
 import { EcosystemSystem } from "../systems/EcosystemSystem";
+import { EventSystem } from "../systems/EventSystem";
 
 export default class MainScene extends Phaser.Scene {
   private boat!:          Boat;
@@ -15,6 +16,7 @@ export default class MainScene extends Phaser.Scene {
   private ecosystem!:     EcosystemSystem;
   private economy!:       EconomySystem;
   private marketZones:    MarketZone[] = [];
+  private events!: EventSystem;
 
   constructor() { super("MainScene"); }
 
@@ -41,7 +43,8 @@ export default class MainScene extends Phaser.Scene {
 
     this.ecosystem = new EcosystemSystem();
     this.economy   = new EconomySystem();
-
+    this.events    = new EventSystem(this.economy, this.ecosystem);
+    
     // Give player starting balance so they can see money working
     this.economy.addRevenue(0);
 
@@ -69,11 +72,23 @@ export default class MainScene extends Phaser.Scene {
       this.hud.showSellFeedback(earned, count);
     };
 
-    this.boat.onEndSeason = (earned, count) => {
-      this.hud.showSellFeedback(earned, count);
-      this.economy.updateSeason();
-      this.seasonManager.advanceSeason();
-    };
+  this.boat.onEndSeason = (earned, count) => {
+    this.hud.showSellFeedback(earned, count);
+
+
+    this.economy.updateSeason();
+
+    const event = this.events.triggerRandomEvent();
+    if (event) {
+      this.showEvent(event.title, event.description);
+    }
+    const crisis = this.events.checkLowPopulationEvent();
+    if (crisis) {
+      this.showEvent(crisis.title, crisis.description);
+    }
+
+    this.seasonManager.advanceSeason();
+  };
 
     this.seasonManager.onSeasonChange = (season, seasonName) => {
       this.hud.showSeasonBanner(season, seasonName);
@@ -94,4 +109,27 @@ export default class MainScene extends Phaser.Scene {
       .filter(z => !z.isGone)
       .forEach(z => z.updateRegen(delta));
   }
+
+  private showEvent(title: string, description: string) {
+  const cx = this.cameras.main.width / 2;
+
+  const text = this.add.text(cx, 60, `${title}\n${description}`, {
+    fontSize: "20px",
+    fontStyle: "bold",
+    color: "#ffee88",
+    fontFamily: "monospace",
+    backgroundColor: "#002233",
+    padding: { x: 20, y: 10 },
+    align: "center"
+  }).setOrigin(0.5);
+
+  // Fade out after 4 seconds
+  this.tweens.add({
+    targets: text,
+    alpha: 0,
+    duration: 4000,
+    ease: "Power2",
+    onComplete: () => text.destroy()
+  });
+}
 }
