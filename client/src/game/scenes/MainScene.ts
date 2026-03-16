@@ -6,6 +6,7 @@ import MarketZone from "../objects/MarketZone";
 import SeasonManager from "../objects/SeasonManager";
 import { EconomySystem } from "../systems/EconomySystem";
 import { EcosystemSystem } from "../systems/EcosystemSystem";
+import { EventSystem } from "../systems/EventSystem";
 
 export default class MainScene extends Phaser.Scene {
   private boat!:          Boat;
@@ -15,6 +16,7 @@ export default class MainScene extends Phaser.Scene {
   private ecosystem!:     EcosystemSystem;
   private economy!:       EconomySystem;
   private marketZones:    MarketZone[] = [];
+  private events!: EventSystem;
 
   constructor() { super("MainScene"); }
 
@@ -41,7 +43,8 @@ export default class MainScene extends Phaser.Scene {
 
     this.ecosystem = new EcosystemSystem();
     this.economy   = new EconomySystem();
-
+    this.events    = new EventSystem(this.economy, this.ecosystem);
+    
     // Give player starting balance so they can see money working
     this.economy.addRevenue(0);
 
@@ -69,11 +72,23 @@ export default class MainScene extends Phaser.Scene {
       this.hud.showSellFeedback(earned, count);
     };
 
-    this.boat.onEndSeason = (earned, count) => {
-      this.hud.showSellFeedback(earned, count);
-      this.economy.updateSeason();
-      this.seasonManager.advanceSeason();
-    };
+  this.boat.onEndSeason = (earned, count) => {
+    this.hud.showSellFeedback(earned, count);
+
+
+    this.economy.updateSeason();
+
+    const event = this.events.triggerRandomEvent();
+    if (event) {
+      this.showEvent(event.title, event.description);
+    }
+    const crisis = this.events.checkLowPopulationEvent();
+    if (crisis) {
+      this.showEvent(crisis.title, crisis.description);
+    }
+
+    this.seasonManager.advanceSeason();
+  };
 
     this.seasonManager.onSeasonChange = (season, seasonName) => {
       this.hud.showSeasonBanner(season, seasonName);
@@ -94,4 +109,46 @@ export default class MainScene extends Phaser.Scene {
       .filter(z => !z.isGone)
       .forEach(z => z.updateRegen(delta));
   }
+  private activeEventTexts: Phaser.GameObjects.Text[] = [];
+
+  private showEvent(title: string, description: string) {
+    const cam = this.cameras.main;
+    const cx = cam.width / 2;
+
+    const spacing = 80; 
+    const startY = 60;
+    const y = startY + this.activeEventTexts.length * spacing;
+
+    const text = this.add.text(cx, y, `${title}\n${description}`, {
+      fontSize: "20px",
+      fontStyle: "bold",
+      color: "#ffee88",
+      fontFamily: "monospace",
+      backgroundColor: "#002233",
+      padding: { x: 20, y: 10 },
+      align: "center",
+      wordWrap: { width: cam.width * 0.8 },
+    }).setOrigin(0.5, 0);
+
+
+    this.activeEventTexts.push(text);
+
+    this.tweens.add({
+      targets: text,
+      alpha: 0,
+      duration: 4000,
+      ease: "Power2",
+      onComplete: () => {
+        text.destroy();
+
+        const index = this.activeEventTexts.indexOf(text);
+        if (index >= 0) this.activeEventTexts.splice(index, 1);
+
+        this.activeEventTexts.forEach((t, i) => {
+          this.tweens.add({ targets: t, y: startY + i * spacing, duration: 200, ease: "Cubic.easeOut" });
+        });
+      }
+    });
+  }
+
 }
