@@ -19,7 +19,7 @@ export default class MainScene extends Phaser.Scene {
   constructor() { super("MainScene"); }
 
   preload() {
-    this.load.image("boat",           "/assets/boat.png");
+    this.load.image("boat",           "/assets/Boat.png");
     this.load.image("fish_anchovy",   "/assets/Anchovy_Sprat_Common.png");
     this.load.image("fish_aurora",    "/assets/Aurora_Trout_Endangered.png");
     this.load.image("fish_crab",      "/assets/European_Green_Crab_Invasive.png");

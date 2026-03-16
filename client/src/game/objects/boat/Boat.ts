@@ -18,7 +18,6 @@ interface BoatModules {
 }
 
 export default class Boat extends Phaser.Physics.Arcade.Sprite {
-  // All submodules stored in a single plain object — Phaser can't touch it
   private _m!: BoatModules;
 
   get money()   { return this._m.inventory.money; }
@@ -45,6 +44,8 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, "boat");
     scene.add.existing(this);
     scene.physics.add.existing(this);
+
+    this.setScale(1); // adjust scale to fit your game world
 
     const eco = economy ?? new EconomySystem();
 
