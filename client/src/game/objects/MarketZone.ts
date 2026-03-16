@@ -50,12 +50,14 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     this.glowBorder = scene.add.rectangle(x, y, width, height)
       .setStrokeStyle(2, 0xffcc44, 0.8).setFillStyle(0, 0);
 
-    scene.tweens.add({
-      targets: [this.glowRect, this.glowBorder],
-      alpha: { from: 0.15, to: 0.45 },
-      duration: 1000, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
-    });
-
+  scene.tweens.add({
+    targets: [this.glowRect, this.glowBorder],
+    alpha: { from: 0.15, to: 0.45 },
+    duration: 3000,  // slower
+    yoyo: true,
+    repeat: -1,
+    ease: "Sine.easeInOut",
+  });
     this.label = scene.add.text(x, y - height / 2 - 14, `🏪 ${name}`, {
       fontSize: "13px", color: "#ffdd88",
       stroke: "#332200", strokeThickness: 3, fontFamily: "monospace",

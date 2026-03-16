@@ -109,27 +109,48 @@ export default class MainScene extends Phaser.Scene {
       .filter(z => !z.isGone)
       .forEach(z => z.updateRegen(delta));
   }
+  private activeEventTexts: Phaser.GameObjects.Text[] = [];
 
   private showEvent(title: string, description: string) {
-  const cx = this.cameras.main.width / 2;
+    const cam = this.cameras.main;
+    const cx = cam.width / 2;
 
-  const text = this.add.text(cx, 60, `${title}\n${description}`, {
-    fontSize: "20px",
-    fontStyle: "bold",
-    color: "#ffee88",
-    fontFamily: "monospace",
-    backgroundColor: "#002233",
-    padding: { x: 20, y: 10 },
-    align: "center"
-  }).setOrigin(0.5);
+    // Calculate Y based on current active events
+    const spacing = 80; // vertical space between popups
+    const startY = 60;
+    const y = startY + this.activeEventTexts.length * spacing;
 
-  // Fade out after 4 seconds
-  this.tweens.add({
-    targets: text,
-    alpha: 0,
-    duration: 4000,
-    ease: "Power2",
-    onComplete: () => text.destroy()
-  });
-}
+    const text = this.add.text(cx, y, `${title}\n${description}`, {
+      fontSize: "20px",
+      fontStyle: "bold",
+      color: "#ffee88",
+      fontFamily: "monospace",
+      backgroundColor: "#002233",
+      padding: { x: 20, y: 10 },
+      align: "center",
+      wordWrap: { width: cam.width * 0.8 },
+    }).setOrigin(0.5, 0);
+
+    // Add to active list
+    this.activeEventTexts.push(text);
+
+    // Fade out after 4 seconds
+    this.tweens.add({
+      targets: text,
+      alpha: 0,
+      duration: 4000,
+      ease: "Power2",
+      onComplete: () => {
+        text.destroy();
+        // Remove from active list
+        const index = this.activeEventTexts.indexOf(text);
+        if (index >= 0) this.activeEventTexts.splice(index, 1);
+        // Shift remaining popups up
+        this.activeEventTexts.forEach((t, i) => {
+          this.tweens.add({ targets: t, y: startY + i * spacing, duration: 200, ease: "Cubic.easeOut" });
+        });
+      }
+    });
+  }
+
 }

@@ -47,12 +47,13 @@ public triggerRandomEvent(): EventResult | null {
 
     return result;
 }
+
     // trigger when fish population gets too low
     public checkLowPopulationEvent(): EventResult | null {
         const ecosystemState = this.ecosystem.getState();
         const fishPopulations = ecosystemState.fishPopulations;
 
-        const lowFish = fishPopulations.find(fish => fish.population <= 50);
+        const lowFish = fishPopulations.find(fish => fish.population <= 75);
 
         if (!lowFish) {
             return null;
