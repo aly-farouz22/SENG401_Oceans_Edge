@@ -18,7 +18,8 @@ export default class MainScene extends Phaser.Scene {
   private ecosystem!:     EcosystemSystem;
   private economy!:       EconomySystem;
   private marketZones:    MarketZone[] = [];
-  private events!:        EventSystem;
+  private eventSystem!:        EventSystem;
+  private hasGameEnded =  false;
 
   constructor() { super("MainScene"); }
 
@@ -45,7 +46,7 @@ export default class MainScene extends Phaser.Scene {
 
     this.ecosystem = new EcosystemSystem();
     this.economy   = new EconomySystem();
-    this.events    = new EventSystem(this.economy, this.ecosystem);
+    this.eventSystem    = new EventSystem(this.economy, this.ecosystem);
 
     this.economy.addRevenue(0);
 
@@ -69,7 +70,7 @@ export default class MainScene extends Phaser.Scene {
 
     this.hud = new HUD(this);
 
-    this.events.onSpawnTrash = (x, y) => {
+    this.eventSystem.onSpawnTrash = (x, y) => {
       this.spawnTrashZone(x, y);
     };
 
@@ -81,10 +82,10 @@ export default class MainScene extends Phaser.Scene {
       this.hud.showSellFeedback(earned, count);
       this.economy.updateSeason();
 
-      const event = this.events.triggerRandomEvent();
+      const event = this.eventSystem.triggerRandomEvent();
       if (event) this.showEvent(event.title, event.description);
 
-      const crisis = this.events.checkLowPopulationEvent();
+      const crisis = this.eventSystem.checkLowPopulationEvent();
       if (crisis) this.showEvent(crisis.title, crisis.description);
 
       this.seasonManager.advanceSeason();
@@ -114,7 +115,7 @@ export default class MainScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number) {
-    const pollutionLevel = this.ecosystem.getState().pollution;
+    const pollutionLevel = this.ecosystem.getState().pollutionLevel;
 
     this.fishingZones
       .filter(z => !z.isGone)
@@ -136,6 +137,11 @@ export default class MainScene extends Phaser.Scene {
     this.fishingZones
       .filter(z => !z.isGone)
       .forEach(z => z.updateRegen(delta));
+
+    if (!this.hasGameEnded && this.ecosystem.isGameOver()) {
+    this.hasGameEnded = true;
+    this.scene.pause();
+    this.showEvent("Game Over", "The ecosystem has collapsed.");}  
   }
 
   private activeEventTexts: Phaser.GameObjects.Text[] = [];
