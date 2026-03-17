@@ -19,6 +19,7 @@ export default class MainScene extends Phaser.Scene {
   private economy!:       EconomySystem;
   private marketZones:    MarketZone[] = [];
   private events!:        EventSystem;
+  private hasGameEnded =  false;
 
   constructor() { super("MainScene"); }
 
@@ -114,7 +115,7 @@ export default class MainScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number) {
-    const pollutionLevel = this.ecosystem.getState().pollution;
+    const pollutionLevel = this.ecosystem.getState().pollutionLevel;
 
     this.fishingZones
       .filter(z => !z.isGone)
@@ -136,6 +137,11 @@ export default class MainScene extends Phaser.Scene {
     this.fishingZones
       .filter(z => !z.isGone)
       .forEach(z => z.updateRegen(delta));
+
+    if (!this.hasGameEnded && this.ecosystem.isGameOver()) {
+    this.hasGameEnded = true;
+    this.scene.pause();
+    this.showEvent("Game Over", "The ecosystem has collapsed.");}  
   }
 
   private activeEventTexts: Phaser.GameObjects.Text[] = [];
