@@ -64,11 +64,12 @@ export default class HUD {
     }
 
     if (ecosystemState) {
-      const { coralHealth, acidityLevel, pollutionLevel, fishPopulations } = ecosystemState;
-      const coralStr = coralHealth   != null ? `🪸 ${coralHealth.toFixed(0)}%` : "";
-      const acidStr  = acidityLevel  != null ? `💧 pH ${acidityLevel.toFixed(2)}` : "";
-      const pollStr  = pollutionLevel != null ? `☣ ${pollutionLevel.toFixed(0)}%` : "";
-      this.ecosystemText.setText([coralStr, pollStr, acidStr].filter(Boolean).join("  "));
+      const { coralHealth, acidityLevel, pollutionLevel, biodiversityIndex } = ecosystemState;
+      const coralStr = `🪸 ${coralHealth.toFixed(0)}%`;
+      const pollStr = `☣ ${pollutionLevel.toFixed(0)}%`;
+      const acidStr = `💧 pH ${acidityLevel.toFixed(2)}`;
+      const bioStr = `🌱 ${biodiversityIndex.toFixed(0)}%`;
+      this.ecosystemText.setText([coralStr, pollStr, acidStr, bioStr].join("  "));
     }
   }
 
