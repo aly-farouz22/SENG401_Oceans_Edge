@@ -16,41 +16,40 @@ export class EventSystem {
     constructor(economy: EconomySystem, ecosystem: EcosystemSystem) {
         this.economy = economy;
         this.ecosystem = ecosystem;
-    }
+    }public triggerRandomEvent(): EventResult | null {
+    const roll = Math.random();
+    let result: EventResult | null = null;
 
-    public triggerRandomEvent(): EventResult | null {
-        const roll = Math.random();
-        let result: EventResult | null = null;
 
-        if (roll < 0.09) {
+        if (roll < 0.50) { 
             result = null;
-        } else if (roll < 0.10) {
+        } else if (roll < 0.60) {
             this.ecosystem.addPollution(10);
             this.onSpawnTrash?.(
                 Phaser.Math.Between(100, 800),
                 Phaser.Math.Between(100, 500)
             );
-            result = { title: "Oil Spill 🛢", description: "Pollution increased and trash appeared in the water!" };
-        } else if (roll < 0.87) {
+            result = { title: "Oil Spill ", description: "Pollution increased and trash appeared in the water!" };
+        } else if (roll < 0.75) {
             this.ecosystem.cleanPollution(8);
-            result = { title: "Community Cleanup 🌿", description: "Pollution decreased by 8." };
-        } else if (roll < 0.93) {
+            result = { title: "Community Cleanup ", description: "Pollution decreased by 8." };
+        } else if (roll < 0.90) {
             this.economy.getState().fuelCost += 5;
-            result = { title: "Fuel Price Increase ⛽", description: "Fuel cost increased by 5." };
-        } else if (roll < 0.97) {
+            result = { title: "Fuel Price Increase ", description: "Fuel cost increased by 5." };
+        } else if (roll < 0.95) {
             this.economy.getState().maintenanceCost += 5;
-            result = { title: "Boat Wear and Tear 🔧", description: "Maintenance cost increased by 5." };
-        } else if (roll < 0.985) {
+            result = { title: "Boat Wear and Tear ", description: "Maintenance cost increased by 5." };
+        } else if (roll < 0.975) {
             this.ecosystem.addPollution(15);
             this.onSpawnTrash?.(
                 Phaser.Math.Between(100, 800),
                 Phaser.Math.Between(100, 500)
             );
             this.economy.getState().maintenanceCost += 10;
-            result = { title: "Weather Damage ⛈", description: "Pollution increased, trash appeared, and maintenance cost increased by 10." };
+            result = { title: "Weather Damage ", description: "Pollution increased, trash appeared, and maintenance cost increased by 10." };
         } else {
             this.economy.addRevenue(20);
-            result = { title: "Fishing Festival 🎉", description: "A local festival boosts your revenue by 20." };
+            result = { title: "Fishing Festival ", description: "A local festival boosts your revenue by 20." };
         }
 
         return result;
