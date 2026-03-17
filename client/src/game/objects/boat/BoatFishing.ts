@@ -1,8 +1,14 @@
 import Phaser from "phaser";
 import CatchPopup from "../CatchPopup";
 import FishingZone, { FishCatch } from "../FishingZone";
+import TrashZone from "../TrashZone";
 
 const CAST_DURATION = 2000;
+
+const TRASH_CATCHES: FishCatch[] = [
+  { name: "Water Bottle",   rarity: "trash", points: 0, endangered: false, isJuvenile: false, amount: 1 },
+  { name: "Cigarette Buds", rarity: "trash", points: 0, endangered: false, isJuvenile: false, amount: 1 },
+];
 
 export default class BoatFishing {
   private scene:    Phaser.Scene;
@@ -11,7 +17,9 @@ export default class BoatFishing {
   private popup:    CatchPopup;
 
   private fishingZones: FishingZone[] = [];
+  private trashZones:   TrashZone[] = [];
   private activeZone:   FishingZone | null = null;
+  private activeTrashZone: TrashZone | null = null;
 
   private _isFishing = false;
   get isFishing() { return this._isFishing; }
@@ -47,30 +55,45 @@ export default class BoatFishing {
     this.fishingZones = zones;
   }
 
-  update(activeZone: FishingZone | null, isAtMarket: boolean) {
-    const { x, y } = this.sprite;
-    const isInZone = activeZone !== null;
+  registerTrashZones(zones: TrashZone[]) {
+    this.trashZones = zones;
+  }
 
+  update(activeZone: FishingZone | null, activeTrashZone: TrashZone | null, isAtMarket: boolean) {
+    const { x, y } = this.sprite;
+    const isInFishZone  = activeZone !== null;
+    const isInTrashZone = activeTrashZone !== null;
+    const isInAnyZone   = isInFishZone || isInTrashZone;
+
+    // Update prompt text based on zone type
     this.promptText
       .setPosition(x, y - 28)
-      .setVisible(isInZone && !this._isFishing && !isAtMarket);
+      .setText(isInTrashZone ? "SPACE to collect trash" : "SPACE to fish")
+      .setColor(isInTrashZone ? "#ffcc66" : "#a0e8ff")
+      .setVisible(isInAnyZone && !this._isFishing && !isAtMarket);
 
     this.barBg.setPosition(x, y - 44);
     this.bar.setPosition(x - 30, y - 44);
 
-    if (isInZone && !this._isFishing && !isAtMarket &&
+    if (isInAnyZone && !this._isFishing && !isAtMarket &&
         Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
-      this.activeZone = activeZone;
-      this.cast();
+      this.activeZone      = activeZone;
+      this.activeTrashZone = activeTrashZone;
+      this.cast(isInTrashZone);
     }
   }
 
-  private cast() {
+  private cast(isTrash = false) {
     this._isFishing = true;
     this.sprite.setVelocity(0);
     this.promptText.setVisible(false);
     this.barBg.setVisible(true);
-    this.bar.setVisible(true).setDisplaySize(0, 8);
+
+    // Blue bar for fish, brown bar for trash
+    this.bar
+      .setFillStyle(isTrash ? 0x886633 : 0x00aaff)
+      .setVisible(true)
+      .setDisplaySize(0, 8);
 
     this.scene.tweens.add({
       targets: this.bar, displayWidth: 60,
@@ -84,14 +107,24 @@ export default class BoatFishing {
     this.barBg.setVisible(false);
     this.bar.setVisible(false);
 
-    const fish = this.activeZone?.castLine() ?? null;
+    let fish: FishCatch | null = null;
+
+    if (this.activeTrashZone && !this.activeTrashZone.isGone) {
+      // Pick a random trash item
+      fish = TRASH_CATCHES[Phaser.Math.Between(0, TRASH_CATCHES.length - 1)];
+      // Each cast removes some trash from the zone
+      this.activeTrashZone.collectTrash();
+    } else {
+      fish = this.activeZone?.castLine() ?? null;
+    }
 
     if (fish) {
       this.popup.show(fish);
       this.onCatch?.(fish);
     }
 
-    this.activeZone = null;
+    this.activeZone      = null;
+    this.activeTrashZone = null;
     this.scene.time.delayedCall(800, () => { this._isFishing = false; });
   }
 }

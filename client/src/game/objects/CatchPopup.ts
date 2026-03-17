@@ -8,6 +8,7 @@ const RARITY_COLORS: Record<string, string> = {
   endangered: "#ff8844",
   legendary:  "#ffcc00",
   invasive:   "#cc44ff",
+  trash:      "#886633",
 };
 
 const RARITY_LABELS: Record<string, string> = {
@@ -17,20 +18,11 @@ const RARITY_LABELS: Record<string, string> = {
   endangered: "⚠ Endangered",
   legendary:  "✨ Legendary",
   invasive:   "🦁 Invasive Species",
+  trash:      "🗑 Pollution Trash",
 };
 
-// Map fish names to preloaded texture keys
 const FISH_IMAGE_MAP: Record<string, string> = {
-  "Sardine":        "fish_anchovy",
-  "Mackerel":       "fish_haddock",
-  "Herring":        "fish_opah",
-  "Bass":           "fish_snapper",
-  "Snapper":        "fish_snapper",
-  "Tuna":           "fish_bluefin",
-  "Swordfish":      "fish_swordfish",
-  "Golden Marlin":  "fish_swordfish",
-  // extras from our fish table
-  "Anchovy":        "fish_anchovy",
+  "Anchovy Sprat":        "fish_anchovy",
   "Haddock":        "fish_haddock",
   "Opah":           "fish_opah",
   "Pacific Halibut":"fish_halibut",
@@ -39,7 +31,12 @@ const FISH_IMAGE_MAP: Record<string, string> = {
   "Bluefin Tuna":   "fish_bluefin",
   "Lionfish":       "fish_lionfish",
   "Green Crab":     "fish_crab",
+  "Swordfish":      "fish_swordfish",
+  "Water Bottle":   "trash_bottle",
+  "Cigarette Buds": "trash_cigarette",
 };
+
+const FISH_SCALE = 4;
 
 export default class CatchPopup {
   private scene:     Phaser.Scene;
@@ -61,6 +58,8 @@ export default class CatchPopup {
     const PW = 560;
     const PH = 700;
 
+    const isTrash = fish.rarity === "trash";
+
     const rarityColor = Phaser.Display.Color.HexStringToColor(
       RARITY_COLORS[fish.rarity] ?? "#ffffff"
     ).color;
@@ -78,21 +77,25 @@ export default class CatchPopup {
     const accentLine = this.scene.add.rectangle(cx, cy - PH / 2 + 54, PW - 40, 2, rarityColor, 0.6)
       .setScrollFactor(0).setDepth(202);
 
-    const header = this.scene.add.text(cx, cy - PH / 2 + 22, "🎣  You caught!", {
-      fontSize: "20px", color: "#a0e8ff", fontFamily: "monospace",
-      stroke: "#000", strokeThickness: 3, fontStyle: "bold",
-    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(202);
+    const header = this.scene.add.text(
+      cx, cy - PH / 2 + 22,
+      isTrash ? "🗑  You caught trash!" : "🎣  You caught!",
+      {
+        fontSize: "20px",
+        color: isTrash ? "#ff9944" : "#a0e8ff",
+        fontFamily: "monospace",
+        stroke: "#000", strokeThickness: 3, fontStyle: "bold",
+      }
+    ).setOrigin(0.5, 0).setScrollFactor(0).setDepth(202);
 
-    // Look up image key by fish name, fall back to a placeholder rectangle
     const imageKey = FISH_IMAGE_MAP[fish.name];
     let img: Phaser.GameObjects.Image | Phaser.GameObjects.Rectangle;
     if (imageKey && this.scene.textures.exists(imageKey)) {
       img = this.scene.add.image(cx, cy - 60, imageKey)
         .setScrollFactor(0).setDepth(202)
-        .setDisplaySize(480, 480);
+        .setScale(FISH_SCALE);
       (img as Phaser.GameObjects.Image).texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     } else {
-      // fallback: coloured circle if image not loaded
       img = this.scene.add.rectangle(cx, cy - 60, 120, 120, rarityColor, 0.3)
         .setScrollFactor(0).setDepth(202);
     }
@@ -108,10 +111,15 @@ export default class CatchPopup {
       fontFamily: "monospace", stroke: "#000", strokeThickness: 3,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
 
-    const pointsText = this.scene.add.text(cx, cy + PH / 2 - 52, `+ $${fish.points}`, {
-      fontSize: "22px", fontStyle: "bold", color: "#ffdd44",
-      fontFamily: "monospace", stroke: "#000", strokeThickness: 4,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
+    const pointsText = this.scene.add.text(
+      cx, cy + PH / 2 - 52,
+      isTrash ? "No reward 🚯" : `+ $${fish.points}`,
+      {
+        fontSize: "22px", fontStyle: "bold",
+        color: isTrash ? "#886633" : "#ffdd44",
+        fontFamily: "monospace", stroke: "#000", strokeThickness: 4,
+      }
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(202);
 
     const hint = this.scene.add.text(cx, cy + PH / 2 - 22, "click anywhere to continue", {
       fontSize: "12px", color: "#445566", fontFamily: "monospace",
@@ -127,9 +135,15 @@ export default class CatchPopup {
       targets: all, alpha: 1, duration: 220, ease: "Cubic.easeOut",
     });
     this.scene.tweens.add({
-      targets: [panel, border, img],
+      targets: [panel, border],
       scaleX: { from: 0.75, to: 1 },
       scaleY: { from: 0.75, to: 1 },
+      duration: 280, ease: "Back.easeOut",
+    });
+    this.scene.tweens.add({
+      targets: [img],
+      scaleX: { from: FISH_SCALE * 0.75, to: FISH_SCALE },
+      scaleY: { from: FISH_SCALE * 0.75, to: FISH_SCALE },
       duration: 280, ease: "Back.easeOut",
     });
 

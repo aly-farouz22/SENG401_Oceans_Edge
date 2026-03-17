@@ -4,6 +4,7 @@ import FishingZone from "../objects/FishingZone";
 import HUD from "../objects/HUD";
 import MarketZone from "../objects/MarketZone";
 import SeasonManager from "../objects/SeasonManager";
+import TrashZone from "../objects/TrashZone";
 import { EconomySystem } from "../systems/EconomySystem";
 import { EcosystemSystem } from "../systems/EcosystemSystem";
 import { EventSystem } from "../systems/EventSystem";
@@ -13,10 +14,11 @@ export default class MainScene extends Phaser.Scene {
   private hud!:           HUD;
   private seasonManager!: SeasonManager;
   private fishingZones:   FishingZone[] = [];
+  private trashZones:     TrashZone[] = [];
   private ecosystem!:     EcosystemSystem;
   private economy!:       EconomySystem;
   private marketZones:    MarketZone[] = [];
-  private events!: EventSystem;
+  private events!:        EventSystem;
 
   constructor() { super("MainScene"); }
 
@@ -34,7 +36,7 @@ export default class MainScene extends Phaser.Scene {
     this.load.image("fish_bluefin",   "/assets/Southern_Bluefin_Tuna_Endangered.png");
     this.load.image("upgrade_fuel",   "/assets/Fuel_Upgrade.png");
     this.load.image("upgrade_net",    "/assets/Net_Upgrade.png");
-    this.load.image("trash_bottle",   "/assets/water_bottle_trash__1_.png");
+    this.load.image("trash_bottle",   "/assets/Water_Bottle_Trash.png");
     this.load.image("trash_cigarette","/assets/Cigarette_Buds_Trash.png");
   }
 
@@ -44,8 +46,7 @@ export default class MainScene extends Phaser.Scene {
     this.ecosystem = new EcosystemSystem();
     this.economy   = new EconomySystem();
     this.events    = new EventSystem(this.economy, this.ecosystem);
-    
-    // Give player starting balance so they can see money working
+
     this.economy.addRevenue(0);
 
     this.fishingZones = [
@@ -68,34 +69,61 @@ export default class MainScene extends Phaser.Scene {
 
     this.hud = new HUD(this);
 
+    this.events.onSpawnTrash = (x, y) => {
+      this.spawnTrashZone(x, y);
+    };
+
     this.boat.onSell = (earned, count) => {
       this.hud.showSellFeedback(earned, count);
     };
 
-  this.boat.onEndSeason = (earned, count) => {
-    this.hud.showSellFeedback(earned, count);
+    this.boat.onEndSeason = (earned, count) => {
+      this.hud.showSellFeedback(earned, count);
+      this.economy.updateSeason();
 
+      const event = this.events.triggerRandomEvent();
+      if (event) this.showEvent(event.title, event.description);
 
-    this.economy.updateSeason();
+      const crisis = this.events.checkLowPopulationEvent();
+      if (crisis) this.showEvent(crisis.title, crisis.description);
 
-    const event = this.events.triggerRandomEvent();
-    if (event) {
-      this.showEvent(event.title, event.description);
-    }
-    const crisis = this.events.checkLowPopulationEvent();
-    if (crisis) {
-      this.showEvent(crisis.title, crisis.description);
-    }
-
-    this.seasonManager.advanceSeason();
-  };
+      this.seasonManager.advanceSeason();
+    };
 
     this.seasonManager.onSeasonChange = (season, seasonName) => {
       this.hud.showSeasonBanner(season, seasonName);
     };
+
+    // Test trash zones — remove once confirmed working
+    this.spawnTrashZone(250, 150);
+    this.spawnTrashZone(600, 400);
+    this.spawnTrashZone(750, 200);
+  }
+
+  private spawnTrashZone(x: number, y: number) {
+    const zone = new TrashZone(this, x, y, 100, 100, this.ecosystem);
+    this.trashZones.push(zone);
+
+    zone.onCleaned = () => {
+      this.showEvent("Trash Cleaned! 🌊", "Pollution reduced and fish populations boosted.");
+      this.trashZones = this.trashZones.filter(z => z !== zone);
+    };
+
+    // Re-register all trash zones with the boat each time one spawns
+    this.boat.registerTrashZones(this.trashZones);
   }
 
   update(time: number, delta: number) {
+    const pollutionLevel = this.ecosystem.getState().pollution;
+
+    this.fishingZones
+      .filter(z => !z.isGone)
+      .forEach(z => z.setPollution(pollutionLevel));
+
+    this.trashZones
+      .filter(z => !z.isGone)
+      .forEach(z => z.update(delta));
+
     this.boat.tick();
     this.seasonManager.update(delta);
     this.hud.update(
@@ -109,13 +137,13 @@ export default class MainScene extends Phaser.Scene {
       .filter(z => !z.isGone)
       .forEach(z => z.updateRegen(delta));
   }
+
   private activeEventTexts: Phaser.GameObjects.Text[] = [];
 
   private showEvent(title: string, description: string) {
     const cam = this.cameras.main;
     const cx = cam.width / 2;
-
-    const spacing = 80; 
+    const spacing = 80;
     const startY = 60;
     const y = startY + this.activeEventTexts.length * spacing;
 
@@ -130,7 +158,6 @@ export default class MainScene extends Phaser.Scene {
       wordWrap: { width: cam.width * 0.8 },
     }).setOrigin(0.5, 0);
 
-
     this.activeEventTexts.push(text);
 
     this.tweens.add({
@@ -140,15 +167,12 @@ export default class MainScene extends Phaser.Scene {
       ease: "Power2",
       onComplete: () => {
         text.destroy();
-
         const index = this.activeEventTexts.indexOf(text);
         if (index >= 0) this.activeEventTexts.splice(index, 1);
-
         this.activeEventTexts.forEach((t, i) => {
           this.tweens.add({ targets: t, y: startY + i * spacing, duration: 200, ease: "Cubic.easeOut" });
         });
-      }
+      },
     });
   }
-
 }

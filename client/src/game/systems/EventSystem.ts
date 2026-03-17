@@ -1,3 +1,4 @@
+import Phaser from "phaser";
 import { EconomySystem } from "./EconomySystem";
 import { EcosystemSystem } from "./EcosystemSystem";
 
@@ -10,45 +11,51 @@ export class EventSystem {
     private economy: EconomySystem;
     private ecosystem: EcosystemSystem;
 
+    public onSpawnTrash?: (x: number, y: number) => void;
+
     constructor(economy: EconomySystem, ecosystem: EcosystemSystem) {
         this.economy = economy;
         this.ecosystem = ecosystem;
     }
 
+    public triggerRandomEvent(): EventResult | null {
+        const roll = Math.random();
+        let result: EventResult | null = null;
 
-// randomly trigger any event
-public triggerRandomEvent(): EventResult | null {
-    const roll = Math.random();
-    let result: EventResult | null = null;
+        if (roll < 0.09) {
+            result = null;
+        } else if (roll < 0.10) {
+            this.ecosystem.addPollution(10);
+            this.onSpawnTrash?.(
+                Phaser.Math.Between(100, 800),
+                Phaser.Math.Between(100, 500)
+            );
+            result = { title: "Oil Spill 🛢", description: "Pollution increased and trash appeared in the water!" };
+        } else if (roll < 0.87) {
+            this.ecosystem.cleanPollution(8);
+            result = { title: "Community Cleanup 🌿", description: "Pollution decreased by 8." };
+        } else if (roll < 0.93) {
+            this.economy.getState().fuelCost += 5;
+            result = { title: "Fuel Price Increase ⛽", description: "Fuel cost increased by 5." };
+        } else if (roll < 0.97) {
+            this.economy.getState().maintenanceCost += 5;
+            result = { title: "Boat Wear and Tear 🔧", description: "Maintenance cost increased by 5." };
+        } else if (roll < 0.985) {
+            this.ecosystem.addPollution(15);
+            this.onSpawnTrash?.(
+                Phaser.Math.Between(100, 800),
+                Phaser.Math.Between(100, 500)
+            );
+            this.economy.getState().maintenanceCost += 10;
+            result = { title: "Weather Damage ⛈", description: "Pollution increased, trash appeared, and maintenance cost increased by 10." };
+        } else {
+            this.economy.addRevenue(20);
+            result = { title: "Fishing Festival 🎉", description: "A local festival boosts your revenue by 20." };
+        }
 
-    if (roll < 0.65) {
-        // 65% chance nothing happens
-        result = null;
-    } else if (roll < 0.77) {
-        this.ecosystem.addPollution(10);
-        result = { title: "Oil Spill", description: "Pollution increased by 10." };
-    } else if (roll < 0.87) {
-        this.ecosystem.cleanPollution(8);
-        result = { title: "Community Cleanup", description: "Pollution decreased by 8." };
-    } else if (roll < 0.93) {
-        this.economy.getState().fuelCost += 5;
-        result = { title: "Fuel Price Increase", description: "Fuel cost increased by 5." };
-    } else if (roll < 0.97) {
-        this.economy.getState().maintenanceCost += 5;
-        result = { title: "Boat Wear and Tear", description: "Maintenance cost increased by 5." };
-    } else if (roll < 0.985) {
-        this.ecosystem.addPollution(15);
-        this.economy.getState().maintenanceCost += 10;
-        result = { title: "Weather Damage", description: "Pollution increased and boat maintenance cost increased by 10." };
-    } else {
-        this.economy.addRevenue(20);
-        result = { title: "Fishing Festival", description: "A local festival boosts your revenue by 20." };
+        return result;
     }
 
-    return result;
-}
-
-    // trigger when fish population gets too low
     public checkLowPopulationEvent(): EventResult | null {
         const ecosystemState = this.ecosystem.getState();
         const fishPopulations = ecosystemState.fishPopulations;
@@ -58,12 +65,12 @@ public triggerRandomEvent(): EventResult | null {
         if (!lowFish) {
             return null;
         }
-        // Make the critically low species endangered and regenerate slower
+
         lowFish.endangered = true;
         lowFish.regeneartionRate -= 0.01;
 
         if (lowFish.regeneartionRate < 0) {
-        lowFish.regeneartionRate = 0;
+            lowFish.regeneartionRate = 0;
         }
 
         ecosystemState.coralHealth -= 10;
@@ -71,12 +78,9 @@ public triggerRandomEvent(): EventResult | null {
             ecosystemState.coralHealth = 0;
         }
 
-
-            return {
-            title: "Fish Population Crisis",
+        return {
+            title: "Fish Population Crisis 🐟",
             description: `${lowFish.name} population is critically low. Coral health decreased, regeneration slowed, and more species are now endangered.`
         };
     }
-
-
 }

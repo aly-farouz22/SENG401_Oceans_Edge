@@ -3,6 +3,7 @@ import { EconomySystem } from "../../systems/EconomySystem";
 import { EcosystemSystem, FishSpecies } from "../../systems/EcosystemSystem";
 import FishingZone from "../FishingZone";
 import MarketZone from "../MarketZone";
+import TrashZone from "../TrashZone";
 import BoatFishing from "./BoatFishing";
 import BoatInventory from "./BoatInventory";
 import BoatMovement from "./BoatMovement";
@@ -37,7 +38,8 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
     this._m.inventory.onUpgrade = cb;
   }
 
-  private zoneOverlaps: Map<FishingZone, number> = new Map();
+  private zoneOverlaps:      Map<FishingZone, number> = new Map();
+  private trashZoneOverlaps: Map<TrashZone, number>   = new Map();
   private marketOverlaps = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, ecosystem: EcosystemSystem, economy?: EconomySystem) {
@@ -45,7 +47,7 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.setScale(1); // adjust scale to fit your game world
+    this.setScale(1);
 
     const eco = economy ?? new EconomySystem();
 
@@ -67,6 +69,19 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
         if (fish.endangered) ecosystemFish.population -= (fish.amount ?? 1) * 0.5;
       }
     };
+  }
+
+  registerTrashZones(zones: TrashZone[]) {
+    this._m.fishing.registerTrashZones(zones);
+
+    // Clear old overlaps and re-register
+    this.trashZoneOverlaps.clear();
+    zones.forEach(zone => {
+      this.trashZoneOverlaps.set(zone, 0);
+      this.scene.physics.add.overlap(this, zone, () => {
+        this.trashZoneOverlaps.set(zone, (this.trashZoneOverlaps.get(zone) ?? 0) + 1);
+      });
+    });
   }
 
   registerZones(zones: FishingZone[]) {
@@ -92,13 +107,19 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
       if (count > 0) { activeZone = zone; break; }
     }
 
+    let activeTrashZone: TrashZone | null = null;
+    for (const [zone, count] of this.trashZoneOverlaps.entries()) {
+      if (count > 0 && !zone.isGone) { activeTrashZone = zone; break; }
+    }
+
     const isAtMarket = this.marketOverlaps > 0;
 
     for (const zone of this.zoneOverlaps.keys()) this.zoneOverlaps.set(zone, 0);
+    for (const zone of this.trashZoneOverlaps.keys()) this.trashZoneOverlaps.set(zone, 0);
     this.marketOverlaps = 0;
 
     this._m.movement.update(this._m.fishing.isFishing);
-    this._m.fishing.update(activeZone, isAtMarket);
+    this._m.fishing.update(activeZone, activeTrashZone, isAtMarket);
     this._m.inventory.update(isAtMarket);
   }
 }
