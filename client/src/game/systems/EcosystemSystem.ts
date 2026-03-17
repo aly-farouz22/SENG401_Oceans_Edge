@@ -169,6 +169,23 @@ export class EcosystemSystem {
     }
   }
 
+  public damageCoral(amount: number): void {
+  this.state.coralHealth -= amount;
+  this.state.coralHealth = Math.max(0, Math.min(100, this.state.coralHealth));
+}
+
+public changeSpeciesRegeneration(fishName: string, amount: number): void {
+  const fish = this.state.fishPopulations.find((f) => f.name === fishName);
+  if (!fish) return;
+
+  fish.regenerationRate += amount;
+  fish.regenerationRate = Math.max(0, fish.regenerationRate);
+}
+
+public getLowPopulationSpecies(threshold: number): FishSpecies | undefined {
+  return this.state.fishPopulations.find((fish) => fish.population <= threshold);
+}
+
   public addPollution(amount: number): void {
     this.state.pollutionLevel += amount;
     this.state.pollutionLevel = Math.max(0, Math.min(100, this.state.pollutionLevel));
