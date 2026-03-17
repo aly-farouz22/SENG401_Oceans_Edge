@@ -87,13 +87,13 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
       inventory.addFish(fish);
 
       const ecosystemFish: FishSpecies | undefined =
-        ecosystem.getState().fishPopulations.find((f) => f.name === fish.name);
+  ecosystem.getState().fishPopulations.find((f) => f.name === (fish.ecosystemName ?? fish.name));
 
       if (!ecosystemFish) return;
 
       const amount = fish.amount ?? 1; // changed to calculate catch amount once and reuse it consistently
 
-      ecosystem.harvestFish(fish.name, amount); // changed to let EcosystemSystem handle population updates and seasonal tracking
+      ecosystem.harvestFish(fish.ecosystemName ?? fish.name, amount); // changed to let EcosystemSystem handle population updates and seasonal tracking
 
       if (fish.isJuvenile && !ecosystemFish.invasive) {
         ecosystemFish.regenerationRate *= 0.9; // changed to use the corrected regenerationRate field name and only penalize non-invasive species

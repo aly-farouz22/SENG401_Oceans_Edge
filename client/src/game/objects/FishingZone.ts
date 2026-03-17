@@ -1,25 +1,26 @@
 import Phaser from "phaser";
 
 export interface FishCatch {
-  endangered: any;
-  isJuvenile: any;
-  amount: any;
+  endangered: boolean;
+  isJuvenile: boolean;
+  amount: number;
   name: string;
+  ecosystemName?: string;
   rarity: "common" | "uncommon" | "rare" | "legendary" | "trash";
   points: number;
 }
 
 const FISH_TABLE: FishCatch[] = [
-  { name: "Anchovy Sprat",   rarity: "common",    points: 5,   endangered: false, isJuvenile: false, amount: 1 },
-  { name: "Haddock",         rarity: "common",    points: 10,  endangered: false, isJuvenile: false, amount: 1 },
-  { name: "Opah",            rarity: "uncommon",  points: 25,  endangered: false, isJuvenile: false, amount: 1 },
-  { name: "Red Snapper",     rarity: "uncommon",  points: 30,  endangered: false, isJuvenile: false, amount: 1 },
-  { name: "Pacific Halibut", rarity: "rare",      points: 75,  endangered: false, isJuvenile: false, amount: 1 },
-  { name: "Swordfish",       rarity: "rare",      points: 100, endangered: false, isJuvenile: false, amount: 1 },
-  { name: "Aurora Trout",    rarity: "legendary", points: 300, endangered: true,  isJuvenile: false, amount: 1 },
-  { name: "Bluefin Tuna",    rarity: "legendary", points: 500, endangered: true,  isJuvenile: false, amount: 1 },
-  { name: "Lionfish",        rarity: "uncommon",  points: 20,  endangered: false, isJuvenile: false, amount: 1 },
-  { name: "Green Crab",      rarity: "common",    points: 8,   endangered: false, isJuvenile: false, amount: 1 },
+  { name: "Anchovy Sprat",   ecosystemName: "Salmon",   rarity: "common",    points: 5,   endangered: false, isJuvenile: false, amount: 1 },
+  { name: "Haddock",         ecosystemName: "Salmon",   rarity: "common",    points: 10,  endangered: false, isJuvenile: false, amount: 1 },
+  { name: "Opah",            ecosystemName: "Tuna",     rarity: "uncommon",  points: 25,  endangered: false, isJuvenile: false, amount: 1 },
+  { name: "Red Snapper",     ecosystemName: "Tuna",     rarity: "uncommon",  points: 30,  endangered: false, isJuvenile: false, amount: 1 },
+  { name: "Pacific Halibut", ecosystemName: "Salmon",   rarity: "rare",      points: 75,  endangered: false, isJuvenile: false, amount: 1 },
+  { name: "Swordfish",       ecosystemName: "Tuna",     rarity: "rare",      points: 100, endangered: false, isJuvenile: false, amount: 1 },
+  { name: "Aurora Trout",    ecosystemName: "Bluefin",  rarity: "legendary", points: 300, endangered: true,  isJuvenile: false, amount: 1 },
+  { name: "Bluefin Tuna",    ecosystemName: "Bluefin",  rarity: "legendary", points: 500, endangered: true,  isJuvenile: false, amount: 1 },
+  { name: "Lionfish",        ecosystemName: "Lionfish", rarity: "uncommon",  points: 20,  endangered: false, isJuvenile: false, amount: 1 },
+  { name: "Green Crab",      ecosystemName: "Lionfish", rarity: "common",    points: 8,   endangered: false, isJuvenile: false, amount: 1 },
 ];
 
 const TRASH_TABLE: FishCatch[] = [
