@@ -3,6 +3,7 @@ import Boat from "../objects/boat/Boat";
 import FishingZone from "../objects/FishingZone";
 import HUD from "../objects/HUD";
 import MarketZone from "../objects/MarketZone";
+import SeasonEndScreen from "../objects/SeasonEndScreen";
 import SeasonManager from "../objects/SeasonManager";
 import TrashZone from "../objects/TrashZone";
 import { EconomySystem } from "../systems/EconomySystem";
@@ -18,7 +19,7 @@ export default class MainScene extends Phaser.Scene {
   private ecosystem!:     EcosystemSystem;
   private economy!:       EconomySystem;
   private marketZones:    MarketZone[] = [];
-  private eventSystem!:        EventSystem;
+  private eventSystem!:   EventSystem;
   private hasGameEnded =  false;
 
   constructor() { super("MainScene"); }
@@ -46,7 +47,7 @@ export default class MainScene extends Phaser.Scene {
 
     this.ecosystem = new EcosystemSystem();
     this.economy   = new EconomySystem();
-    this.eventSystem    = new EventSystem(this.economy, this.ecosystem);
+    this.eventSystem = new EventSystem(this.economy, this.ecosystem);
 
     this.economy.addRevenue(0);
 
@@ -79,16 +80,42 @@ export default class MainScene extends Phaser.Scene {
     };
 
     this.boat.onEndSeason = (earned, count) => {
-      this.hud.showSellFeedback(earned, count);
-      this.economy.updateSeason();
+      const econState = this.economy.getState();
 
-      const event = this.eventSystem.triggerRandomEvent();
-      if (event) this.showEvent(event.title, event.description);
+      const screen = new SeasonEndScreen(this);
+      screen.show({
+        earnings:        earned,
+        fuelCost:        econState.fuelCost,
+        licenseFee:      20,
+        maintenanceCost: econState.maintenanceCost,
+        currentBalance:  econState.balance,
+      });
 
-      const crisis = this.eventSystem.checkLowPopulationEvent();
-      if (crisis) this.showEvent(crisis.title, crisis.description);
+      screen.onComplete = (canContinue) => {
+        const totalCosts = econState.fuelCost + 20 + econState.maintenanceCost;
 
-      this.seasonManager.advanceSeason();
+        // Add earnings then deduct costs
+        econState.balance += earned;
+        econState.balance -= totalCosts;
+
+        if (econState.balance < 0) {
+          this.hasGameEnded = true;
+          this.showEvent("💀 Game Over", "You couldn't cover your seasonal costs!");
+          this.scene.pause();
+          return;
+        }
+
+        this.hud.showSellFeedback(earned, count);
+        this.economy.updateSeason();
+
+        const event = this.eventSystem.triggerRandomEvent();
+        if (event) this.showEvent(event.title, event.description);
+
+        const crisis = this.eventSystem.checkLowPopulationEvent();
+        if (crisis) this.showEvent(crisis.title, crisis.description);
+
+        this.seasonManager.advanceSeason();
+      };
     };
 
     this.seasonManager.onSeasonChange = (season, seasonName) => {
@@ -110,7 +137,6 @@ export default class MainScene extends Phaser.Scene {
       this.trashZones = this.trashZones.filter(z => z !== zone);
     };
 
-    // Re-register all trash zones with the boat each time one spawns
     this.boat.registerTrashZones(this.trashZones);
   }
 
@@ -139,9 +165,10 @@ export default class MainScene extends Phaser.Scene {
       .forEach(z => z.updateRegen(delta));
 
     if (!this.hasGameEnded && this.ecosystem.isGameOver()) {
-    this.hasGameEnded = true;
-    this.scene.pause();
-    this.showEvent("Game Over", "The ecosystem has collapsed.");}  
+      this.hasGameEnded = true;
+      this.scene.pause();
+      this.showEvent("Game Over", "The ecosystem has collapsed.");
+    }
   }
 
   private activeEventTexts: Phaser.GameObjects.Text[] = [];

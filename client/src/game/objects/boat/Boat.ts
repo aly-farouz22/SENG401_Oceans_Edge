@@ -95,7 +95,7 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
 
       ecosystem.harvestFish(fish.ecosystemName ?? fish.name, amount); // changed to let EcosystemSystem handle population updates and seasonal tracking
 
-      if (fish.isJuvenile && !ecosystemFish.invasive) {
+      if (fish.isJuvenile && !fish.invasive) {
         ecosystemFish.regenerationRate *= 0.9; // changed to use the corrected regenerationRate field name and only penalize non-invasive species
       }
     };

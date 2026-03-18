@@ -30,11 +30,6 @@ export default class SeasonManager {
   }
 
   update(delta: number) {
-    this.timeElapsed += delta;
-    if (this.timeElapsed >= this.seasonDuration) {
-      this.advanceSeason();
-      this.timeElapsed = 0;
-    }
   }
 
   advanceSeason() {

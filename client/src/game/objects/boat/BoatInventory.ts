@@ -14,7 +14,6 @@ export default class BoatInventory {
 
   fish:  FishCatch[] = [];
 
-  // Always read money from EconomySystem if available, else local fallback
   private _money = 0;
   get money() {
     return this.economy ? this.economy.getBalance() : this._money;
@@ -46,23 +45,18 @@ export default class BoatInventory {
           return;
         }
 
-        const count = inventory.length;
-        let earned  = 0;
+        const count  = inventory.length;
+        const earned = inventory.reduce((sum, f) => sum + f.points, 0);
 
-        if (this.economy) {
-          // Use EconomySystem for pricing
-          const catches = inventory.map(f => ({ fishName: f.name, amount: f.amount ?? 1 }));
-          earned = this.economy.processFishingTrip(catches);
-          // If processFishingTrip returns 0 (names don't match price list), fall back to points
-          if (earned === 0) {
-            earned = inventory.reduce((sum, f) => sum + f.points, 0);
+        if (choice === "sell") {
+          // Add to balance immediately for regular sells
+          if (this.economy) {
             this.economy.addRevenue(earned);
+          } else {
+            this._money += earned;
           }
-        } else {
-          // Fallback: use fish.points directly
-          earned = inventory.reduce((sum, f) => sum + f.points, 0);
-          this._money += earned;
         }
+        // For end_season, MainScene.onComplete handles balance changes
 
         this.fish = [];
 
@@ -70,8 +64,6 @@ export default class BoatInventory {
           this.onSell?.(earned, count);
         } else if (choice === "end_season") {
           this.onEndSeason?.(earned, count);
-        } else if (choice === "upgrade") {
-          this.onUpgrade?.();
         }
       };
     });

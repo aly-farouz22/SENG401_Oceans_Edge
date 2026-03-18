@@ -3,6 +3,7 @@ import Phaser from "phaser";
 export interface FishCatch {
   endangered: boolean;
   isJuvenile: boolean;
+  invasive:   boolean;
   amount: number;
   name: string;
   ecosystemName?: string;
@@ -11,28 +12,28 @@ export interface FishCatch {
 }
 
 const FISH_TABLE: FishCatch[] = [
-  { name: "Anchovy Sprat",   ecosystemName: "Salmon",   rarity: "common",    points: 5,   endangered: false, isJuvenile: false, amount: 1 },
-  { name: "Haddock",         ecosystemName: "Salmon",   rarity: "common",    points: 10,  endangered: false, isJuvenile: false, amount: 1 },
-  { name: "Opah",            ecosystemName: "Tuna",     rarity: "uncommon",  points: 25,  endangered: false, isJuvenile: false, amount: 1 },
-  { name: "Red Snapper",     ecosystemName: "Tuna",     rarity: "uncommon",  points: 30,  endangered: false, isJuvenile: false, amount: 1 },
-  { name: "Pacific Halibut", ecosystemName: "Salmon",   rarity: "rare",      points: 75,  endangered: false, isJuvenile: false, amount: 1 },
-  { name: "Swordfish",       ecosystemName: "Tuna",     rarity: "rare",      points: 100, endangered: false, isJuvenile: false, amount: 1 },
-  { name: "Aurora Trout",    ecosystemName: "Bluefin",  rarity: "legendary", points: 300, endangered: true,  isJuvenile: false, amount: 1 },
-  { name: "Bluefin Tuna",    ecosystemName: "Bluefin",  rarity: "legendary", points: 500, endangered: true,  isJuvenile: false, amount: 1 },
-  { name: "Lionfish",        ecosystemName: "Lionfish", rarity: "uncommon",  points: 20,  endangered: false, isJuvenile: false, amount: 1 },
-  { name: "Green Crab",      ecosystemName: "Lionfish", rarity: "common",    points: 8,   endangered: false, isJuvenile: false, amount: 1 },
+  { name: "Anchovy Sprat",   ecosystemName: "Salmon",   rarity: "common",    points: 15,  endangered: false, invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Haddock",         ecosystemName: "Salmon",   rarity: "common",    points: 15,  endangered: false, invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Opah",            ecosystemName: "Tuna",     rarity: "uncommon",  points: 25,  endangered: false, invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Red Snapper",     ecosystemName: "Tuna",     rarity: "uncommon",  points: 30,  endangered: false, invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Pacific Halibut", ecosystemName: "Salmon",   rarity: "rare",      points: 75,  endangered: false, invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Swordfish",       ecosystemName: "Tuna",     rarity: "rare",      points: 100, endangered: false, invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Aurora Trout",    ecosystemName: "Bluefin",  rarity: "legendary", points: 300, endangered: true,  invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Bluefin Tuna",    ecosystemName: "Bluefin",  rarity: "legendary", points: 500, endangered: true,  invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Lionfish",        ecosystemName: "Lionfish", rarity: "uncommon",  points: 20,  endangered: false, invasive: true,  isJuvenile: false, amount: 1 },
+  { name: "Green Crab",      ecosystemName: "Lionfish", rarity: "common",    points: 8,   endangered: false, invasive: true,  isJuvenile: false, amount: 1 },
 ];
 
 const TRASH_TABLE: FishCatch[] = [
-  { name: "Water Bottle",   rarity: "trash", points: 0, endangered: false, isJuvenile: false, amount: 1 },
-  { name: "Cigarette Buds", rarity: "trash", points: 0, endangered: false, isJuvenile: false, amount: 1 },
+  { name: "Water Bottle",   rarity: "trash", points: 0, endangered: false, invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Cigarette Buds", rarity: "trash", points: 0, endangered: false, invasive: false, isJuvenile: false, amount: 1 },
 ];
 
-const RARITY_WEIGHTS = { common: 60, uncommon: 25, rare: 12, legendary: 3 };
+const RARITY_WEIGHTS = { common: 40, uncommon: 30, rare: 20, legendary: 10 };
 
 const BAR_WIDTH      = 64;
 const BAR_HEIGHT     = 8;
-const MAX_STOCK      = 4;
+const MAX_STOCK      = 6;
 const DEPLETE_AMOUNT = 1;
 const REGEN_RATE     = 0.04;
 const FADE_DURATION  = 800;
@@ -126,31 +127,38 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
   castLine(): FishCatch | null {
     if (this.isEmpty || this._destroyed) return null;
 
-    this.stock = Math.max(0, this.stock - DEPLETE_AMOUNT);
-    this.refreshBar();
+    // Determine catch first
+    let result: FishCatch | null = null;
 
-    if (this.stock <= 0) {
-      this.fadeAndDestroy();
-      return null;
-    }
-
-    // Chance to catch trash based on pollution level (max 40% at full pollution)
     const trashChance = (this.pollutionLevel / 100) * 40;
     if (Phaser.Math.Between(1, 100) <= trashChance) {
-      return TRASH_TABLE[Phaser.Math.Between(0, TRASH_TABLE.length - 1)];
+      result = TRASH_TABLE[Phaser.Math.Between(0, TRASH_TABLE.length - 1)];
+    } else {
+      const roll = Phaser.Math.Between(1, 100);
+      let cumulative = 0;
+      let rarity: keyof typeof RARITY_WEIGHTS = "common";
+
+      for (const [r, weight] of Object.entries(RARITY_WEIGHTS) as [keyof typeof RARITY_WEIGHTS, number][]) {
+        cumulative += weight;
+        if (roll <= cumulative) { rarity = r; break; }
+      }
+
+      const pool = FISH_TABLE.filter(f => f.rarity === rarity);
+      result = pool.length ? pool[Phaser.Math.Between(0, pool.length - 1)] : null;
     }
 
-    const roll = Phaser.Math.Between(1, 100);
-    let cumulative = 0;
-    let rarity: keyof typeof RARITY_WEIGHTS = "common";
+    // Only deplete stock for non-invasive catches
+    if (!result?.invasive) {
+      this.stock = Math.max(0, this.stock - DEPLETE_AMOUNT);
+      this.refreshBar();
 
-    for (const [r, weight] of Object.entries(RARITY_WEIGHTS) as [keyof typeof RARITY_WEIGHTS, number][]) {
-      cumulative += weight;
-      if (roll <= cumulative) { rarity = r; break; }
+      if (this.stock <= 0) {
+        this.fadeAndDestroy();
+        return null;
+      }
     }
 
-    const pool = FISH_TABLE.filter(f => f.rarity === rarity);
-    return pool.length ? pool[Phaser.Math.Between(0, pool.length - 1)] : null;
+    return result;
   }
 
   private fadeAndDestroy() {
