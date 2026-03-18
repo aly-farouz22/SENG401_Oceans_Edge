@@ -55,6 +55,7 @@ export default class TrashZone extends Phaser.GameObjects.Zone {
     this.barBg = scene.add.rectangle(x, barY, BAR_WIDTH, BAR_HEIGHT, 0x332200)
       .setDepth(9);
 
+    // Starts full (all trash present), shrinks as player collects
     this.barFill = scene.add.rectangle(
       x - BAR_WIDTH / 2, barY, BAR_WIDTH, BAR_HEIGHT, 0x886633
     ).setOrigin(0, 0.5).setDepth(10);

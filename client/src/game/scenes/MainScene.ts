@@ -9,7 +9,8 @@ import TrashZone from "../objects/TrashZone";
 import { EconomySystem } from "../systems/EconomySystem";
 import { EcosystemSystem } from "../systems/EcosystemSystem";
 import { EventSystem } from "../systems/EventSystem";
-
+//change water_bottle to uppercase
+//test 1
 export default class MainScene extends Phaser.Scene {
   private boat!:          Boat;
   private hud!:           HUD;
