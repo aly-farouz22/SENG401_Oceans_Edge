@@ -1,3 +1,4 @@
+
 import Phaser from "phaser";
 import { EconomySystem } from "../../systems/EconomySystem";
 import { FishCatch } from "../FishingZone";
@@ -13,8 +14,8 @@ export default class BoatInventory {
   private marketPrompt: Phaser.GameObjects.Text;
 
   fish:  FishCatch[] = [];
-  private _money = 0;
 
+  private _money = 0;
   get money() {
     return this.economy ? this.economy.getBalance() : this._money;
   }
@@ -29,11 +30,8 @@ export default class BoatInventory {
     this.economy = economy ?? null;
 
     this.marketPrompt = scene.add.text(0, 0, "Sail to dock to sell", {
-      fontSize: "12px",
-      color: "#ffdd88",
-      stroke: "#332200",
-      strokeThickness: 2,
-      fontFamily: "monospace",
+      fontSize: "12px", color: "#ffdd88",
+      stroke: "#332200", strokeThickness: 2, fontFamily: "monospace",
     }).setOrigin(0.5, 0).setVisible(false).setDepth(10);
   }
 
@@ -52,12 +50,14 @@ export default class BoatInventory {
         const earned = inventory.reduce((sum, f) => sum + f.points, 0);
 
         if (choice === "sell") {
+          // Add to balance immediately for regular sells
           if (this.economy) {
             this.economy.addRevenue(earned);
           } else {
             this._money += earned;
           }
         }
+        // For end_season, MainScene.onComplete handles balance changes
 
         this.fish = [];
 

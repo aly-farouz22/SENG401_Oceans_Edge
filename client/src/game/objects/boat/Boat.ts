@@ -83,37 +83,36 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
 
     this._m = { movement, fishing, inventory, upgrades, economy: eco, ecosystem };
 
-    const originalOnSell = this._m.inventory.onSell;
-    this._m.inventory.onSell = (earned, count) => {
-      originalOnSell?.(earned, count);
-    };
-
     fishing.onCatch = (fish) => {
       inventory.addFish(fish);
 
       const ecosystemFish: FishSpecies | undefined =
-        ecosystem.getState().fishPopulations.find((f) => f.name === (fish.ecosystemName ?? fish.name));
+  ecosystem.getState().fishPopulations.find((f) => f.name === (fish.ecosystemName ?? fish.name));
 
       if (!ecosystemFish) return;
 
-      const amount = fish.amount ?? 1;
+      const amount = fish.amount ?? 1; // changed to calculate catch amount once and reuse it consistently
 
-      ecosystem.harvestFish(fish.ecosystemName ?? fish.name, amount);
+      ecosystem.harvestFish(fish.ecosystemName ?? fish.name, amount); // changed to let EcosystemSystem handle population updates and seasonal tracking
 
       if (fish.isJuvenile && !fish.invasive) {
-        ecosystemFish.regenerationRate *= 0.9;
+        ecosystemFish.regenerationRate *= 0.9; // changed to use the corrected regenerationRate field name and only penalize non-invasive species
       }
     };
   }
 
   registerTrashZones(zones: TrashZone[]) {
     this._m.fishing.registerTrashZones(zones);
+
     this.trashZoneOverlaps.clear();
 
     zones.forEach((zone) => {
       this.trashZoneOverlaps.set(zone, 0);
       this.scene.physics.add.overlap(this, zone, () => {
-        this.trashZoneOverlaps.set(zone, (this.trashZoneOverlaps.get(zone) ?? 0) + 1);
+        this.trashZoneOverlaps.set(
+          zone,
+          (this.trashZoneOverlaps.get(zone) ?? 0) + 1
+        );
       });
     });
   }
