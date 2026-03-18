@@ -3,7 +3,7 @@ import { EcosystemSystem } from "../systems/EcosystemSystem";
 import FishingZone from "./FishingZone";
 
 const SEASON_NAMES = ["Spring", "Summer", "Autumn", "Winter"];
-const SEASON_REGEN_AMOUNT = 4;
+const SEASON_REGEN_AMOUNT = 3;
 const SEASON_DURATION = 60000;
 
 export default class SeasonManager {
