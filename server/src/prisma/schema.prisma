@@ -1,15 +1,12 @@
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
-model GameState {
-  id        Int    @id @default(autoincrement())
-  playerId  String @unique
-  state     Json
+model Player {
+  id       String   @id @default(cuid())
+  name     String
+  money    Int      @default(0)
+  fish     Json     @default("[]") // Store fish as JSON for now
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
