@@ -8,7 +8,6 @@ import BoatFishing from "./BoatFishing";
 import BoatInventory from "./BoatInventory";
 import BoatMovement from "./BoatMovement";
 import BoatUpgrade from "./BoatUpgrade";
-import Player from "../../models/Player";
 
 interface BoatModules {
   movement: BoatMovement;
@@ -21,16 +20,13 @@ interface BoatModules {
 
 export default class Boat extends Phaser.Physics.Arcade.Sprite {
   private _m!: BoatModules;
-  private player: Player;
 
   get money() {
-    // return this._m.inventory.money;
-    return this.player.money;
+    return this._m.inventory.money;
   }
 
   get fish() {
-    // return this._m.inventory.fish;
-    return this.player.fish;
+    return this._m.inventory.fish;
   }
 
   get upgrades() {
@@ -79,7 +75,6 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
     this.setScale(1);
 
     const eco = economy ?? new EconomySystem();
-    this.player = new Player("Player 1");
 
     const movement = new BoatMovement(scene, this);
     const fishing = new BoatFishing(scene, this);
@@ -87,44 +82,38 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
     const upgrades = new BoatUpgrade(this);
 
     this._m = { movement, fishing, inventory, upgrades, economy: eco, ecosystem };
+
     const originalOnSell = this._m.inventory.onSell;
     this._m.inventory.onSell = (earned, count) => {
-      this.player.addMoney(earned);
       originalOnSell?.(earned, count);
-    }
+    };
 
-    // fishing.onCatch = (fish) => {
-    //   inventory.addFish(fish);
     fishing.onCatch = (fish) => {
-      this.player.addFish(fish);
+      inventory.addFish(fish);
 
       const ecosystemFish: FishSpecies | undefined =
-          ecosystem.getState().fishPopulations.find((f) => f.name === (fish.ecosystemName ?? fish.name));
+        ecosystem.getState().fishPopulations.find((f) => f.name === (fish.ecosystemName ?? fish.name));
 
       if (!ecosystemFish) return;
 
-      const amount = fish.amount ?? 1; // changed to calculate catch amount once and reuse it consistently
+      const amount = fish.amount ?? 1;
 
-      ecosystem.harvestFish(fish.ecosystemName ?? fish.name, amount); // changed to let EcosystemSystem handle population updates and seasonal tracking
+      ecosystem.harvestFish(fish.ecosystemName ?? fish.name, amount);
 
       if (fish.isJuvenile && !fish.invasive) {
-        ecosystemFish.regenerationRate *= 0.9; // changed to use the corrected regenerationRate field name and only penalize non-invasive species
+        ecosystemFish.regenerationRate *= 0.9;
       }
     };
   }
 
   registerTrashZones(zones: TrashZone[]) {
     this._m.fishing.registerTrashZones(zones);
-
     this.trashZoneOverlaps.clear();
 
     zones.forEach((zone) => {
       this.trashZoneOverlaps.set(zone, 0);
       this.scene.physics.add.overlap(this, zone, () => {
-        this.trashZoneOverlaps.set(
-          zone,
-          (this.trashZoneOverlaps.get(zone) ?? 0) + 1
-        );
+        this.trashZoneOverlaps.set(zone, (this.trashZoneOverlaps.get(zone) ?? 0) + 1);
       });
     });
   }

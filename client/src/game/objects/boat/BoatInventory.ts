@@ -2,36 +2,38 @@ import Phaser from "phaser";
 import { EconomySystem } from "../../systems/EconomySystem";
 import { FishCatch } from "../FishingZone";
 import MarketZone from "../MarketZone";
-import Player from "../../models/Player";
 
 export default class BoatInventory {
   private scene:       Phaser.Scene;
   private sprite:      Phaser.Physics.Arcade.Sprite;
   private marketZones: MarketZone[] = [];
-  // private economy:     EconomySystem | null = null;
+  private economy:     EconomySystem | null = null;
 
   private atMarketLastFrame = false;
   private marketPrompt: Phaser.GameObjects.Text;
 
-  // fish:  FishCatch[] = [];
+  fish:  FishCatch[] = [];
+  private _money = 0;
 
-  // private _money = 0;
-  // get money() {
-  //   return this.economy ? this.economy.getBalance() : this._money;
-  // }
+  get money() {
+    return this.economy ? this.economy.getBalance() : this._money;
+  }
 
   onSell?:      (earned: number, count: number) => void;
   onEndSeason?: (earned: number, count: number) => void;
   onUpgrade?:   () => void;
 
-  constructor(scene: Phaser.Scene, sprite: Phaser.Physics.Arcade.Sprite, private player: Player, economy?: EconomySystem) {
+  constructor(scene: Phaser.Scene, sprite: Phaser.Physics.Arcade.Sprite, economy?: EconomySystem) {
     this.scene   = scene;
     this.sprite  = sprite;
-    // this.economy = economy ?? null;
+    this.economy = economy ?? null;
 
     this.marketPrompt = scene.add.text(0, 0, "Sail to dock to sell", {
-      fontSize: "12px", color: "#ffdd88",
-      stroke: "#332200", strokeThickness: 2, fontFamily: "monospace",
+      fontSize: "12px",
+      color: "#ffdd88",
+      stroke: "#332200",
+      strokeThickness: 2,
+      fontFamily: "monospace",
     }).setOrigin(0.5, 0).setVisible(false).setDepth(10);
   }
 
@@ -41,49 +43,35 @@ export default class BoatInventory {
     zones.forEach(zone => {
       zone.onChoice = (choice, inventory) => {
         if (choice === "cancel") return;
-        const count  = inventory.length;
-        const earned = inventory.reduce((sum, f) => sum + f.points, 0);
         if (choice === "upgrade") {
           this.onUpgrade?.();
           return;
         }
 
-        
+        const count  = inventory.length;
+        const earned = inventory.reduce((sum, f) => sum + f.points, 0);
 
         if (choice === "sell") {
-          // Add to balance immediately for regular sells
-          // if (this.economy) {
-          //   this.economy.addRevenue(earned);
-          // } else {
-          //   this._money += earned;
-          // }
-          this.player.addMoney(earned);
-          this.player.clearFish();
-          this.onSell?.(earned, count);
+          if (this.economy) {
+            this.economy.addRevenue(earned);
+          } else {
+            this._money += earned;
+          }
         }
-        // For end_season, MainScene.onComplete handles balance changes
 
-        // this.fish = [];
+        this.fish = [];
 
-        // if (choice === "sell") {
-        //   // this.onSell?.(earned, count);
-        //   player.addMoney(earned);
-        // } else if (choice === "end_season") {
-        //   this.onEndSeason?.(earned, count);
-        // }
-        if (choice === "end_season") {
-          this.player.clearFish();
+        if (choice === "sell") {
+          this.onSell?.(earned, count);
+        } else if (choice === "end_season") {
           this.onEndSeason?.(earned, count);
         }
       };
     });
   }
 
-  // addFish(fish: FishCatch) {
-  //   this.fish.push(fish);
-  // }
   addFish(fish: FishCatch) {
-    this.player.addFish(fish);
+    this.fish.push(fish);
   }
 
   update(isAtMarket: boolean) {
@@ -91,12 +79,12 @@ export default class BoatInventory {
 
     this.marketPrompt
       .setPosition(x, y + 20)
-      .setVisible(!isAtMarket && this.player.fish.length > 0);
+      .setVisible(!isAtMarket && this.fish.length > 0);
 
     if (isAtMarket && !this.atMarketLastFrame) {
       const zone = this.marketZones[0];
       if (zone && !zone.menuOpen) {
-        zone.showMenu(this.player.fish);
+        zone.showMenu(this.fish);
       }
     }
 
