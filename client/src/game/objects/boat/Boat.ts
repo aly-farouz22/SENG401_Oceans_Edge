@@ -56,6 +56,15 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
   set onUpgrade(cb: () => void) {
     this._m.inventory.onUpgrade = cb;
   }
+  public getState() {
+    return {
+      x: this.sprite.x,
+      y: this.sprite.y,
+      money: this.money,
+      fish: this.fish,
+      upgrades: this.upgrades.getState(), // if you have upgrades
+    };
+  }
 
   private zoneOverlaps: Map<FishingZone, number> = new Map();
   private trashZoneOverlaps: Map<TrashZone, number> = new Map();

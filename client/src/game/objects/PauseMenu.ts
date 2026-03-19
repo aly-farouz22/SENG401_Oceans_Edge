@@ -28,7 +28,7 @@ export default class PauseMenu {
     const cx = W / 2;
     const cy = H / 2;
     const PW = 340;
-    const PH = 480; // taller to fit extra button
+    const PH = 520; // taller to fit extra button
     const DEPTH = 400;
 
     const overlay = this.scene.add.rectangle(cx, cy, W, H, 0x000000, 0.75)
@@ -57,14 +57,17 @@ export default class PauseMenu {
     const btnResume = this.makeButton(cx, cy - 60,  "▶  Resume",        "#44ff88", DEPTH + 3);
     const btnBadges = this.makeButton(cx, cy + 5,  "🏅  Badges",        "#ffcc44", DEPTH + 3);
     const btnSave   = this.makeButton(cx, cy + 70,  "💾  Save Game",     "#66ccff", DEPTH + 3);
-    const btnExit   = this.makeButton(cx, cy + 135, "🏠  Exit to Menu",  "#ffaa44", DEPTH + 3);
-    const btnQuit   = this.makeButton(cx, cy + 200, "✖  Quit Game",      "#ff6666", DEPTH + 3);
+    const btnLoad   = this.makeButton(cx, cy + 135, "📂  Load Game",    "#44ffaa", DEPTH + 3);
+    const btnExit   = this.makeButton(cx, cy + 200, "🏠  Exit to Menu",  "#ffaa44", DEPTH + 3);
+    const btnQuit   = this.makeButton(cx, cy + 265, "✖  Quit Game",      "#ff6666", DEPTH + 3);
 
     // Resume
     btnResume.on("pointerdown", () => {
       this.close();
       this.onResume?.();
     });
+    btnLoad.on("pointerover", () => btnLoad.setAlpha(0.75));
+    btnLoad.on("pointerout",  () => btnLoad.setAlpha(1));
 
     // Badges
     btnBadges.on("pointerdown", () => {
@@ -96,6 +99,30 @@ export default class PauseMenu {
           this.scene.time.delayedCall(2000, () => saveStatus.setText(""));
         });
     });
+    btnLoad.on("pointerdown", () => {
+      const loadStatus = this.scene.add.text(cx, cy + 180, "⏳ Loading...", {
+        fontSize: "16px",
+        color: "#66ccff",
+        fontFamily: "monospace",
+      }).setOrigin(0.5).setDepth(DEPTH + 4);
+  
+      fetch(`/api/game/load/${PLAYER_ID}/default`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.data) {
+            this.scene.applySavedGame(data.data); // MainScene method
+            loadStatus.setColor("#44ff88").setText("✅ Game loaded!");
+          } else {
+            loadStatus.setColor("#ff4444").setText("❌ No save found!");
+          }
+  
+          this.scene.time.delayedCall(2000, () => loadStatus.destroy());
+        })
+        .catch(() => {
+          loadStatus.setColor("#ff4444").setText("❌ Load failed!");
+          this.scene.time.delayedCall(2000, () => loadStatus.destroy());
+        });
+    });
 
     // Exit to BootScene
     btnExit.on("pointerdown", () => {
@@ -119,7 +146,7 @@ export default class PauseMenu {
     });
 
     const all = [overlay, panel, border, title, divider, saveStatus,
-                 btnResume, btnBadges, btnSave, btnExit, btnQuit];
+                 btnResume, btnBadges, btnSave, btnLoad,btnExit, btnQuit];
 
     this.container = this.scene.add.container(0, 0, all).setDepth(DEPTH);
 

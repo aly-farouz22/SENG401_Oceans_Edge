@@ -104,9 +104,13 @@ export default class MainScene extends Phaser.Scene {
       };
 
       this.pauseMenu.getGameState = () => ({
-        money:   this.economy.getBalance(),
-        season:  this.seasonManager.season,
-        balance: this.economy.getState().balance,
+        economy:   this.economy.getState(),
+        ecosystem: this.ecosystem.getState(),
+        boat:      this.boat.getState(),
+        seasonManager: {
+          season: this.seasonManager.season,
+          seasonName: this.seasonManager.seasonName
+        }
       });
 
       this.eventSystem.onSpawnTrash = (x, y) => {
@@ -223,6 +227,44 @@ export default class MainScene extends Phaser.Scene {
   }
 
   private activeEventTexts: Phaser.GameObjects.Text[] = [];
+
+  // ── Path: client/MainScene.ts ──
+  public applySavedGame(savedState: any) {
+    // Restore economy
+    if (savedState.economy) {
+      Object.assign(this.economy.getState(), savedState.economy);
+    }
+
+    // Restore ecosystem
+    if (savedState.ecosystem) {
+      Object.assign(this.ecosystem.getState(), savedState.ecosystem);
+    }
+
+    // Restore boat
+    if (savedState.boat) {
+      Object.assign(this.boat.getState(), savedState.boat);
+    }
+
+    // Optionally restore season
+    if (savedState.seasonManager) {
+      this.seasonManager.season = savedState.seasonManager.season;
+      this.seasonManager.seasonName = savedState.seasonManager.seasonName;
+    }
+
+    // Refresh HUD
+    this.hud.update(
+      this.boat.money,
+      this.boat.fish,
+      this.seasonManager.season,
+      this.seasonManager.seasonName,
+      this.ecosystem.getState()
+    );
+
+    // Refresh fishing zones, trash, etc.
+    this.fishingZones.forEach(z => z.updateRegen(0));
+    this.trashZones.forEach(z => z.update(0));
+  }
+  
 
   private showEvent(title: string, description: string) {
     const cam     = this.cameras.main;

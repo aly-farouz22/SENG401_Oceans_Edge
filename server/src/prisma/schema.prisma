@@ -1,12 +1,8 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
-model Player {
-  id       String   @id @default(cuid())
-  name     String
-  money    Int      @default(0)
-  fish     Json     @default("[]") // Store fish as JSON for now
+model GameSave {
+  id        Int      @id @default(autoincrement())
+  userId    String   // associate with player account
+  name      String   // save slot name
+  data      Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
