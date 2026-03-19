@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { EcosystemState } from "../systems/EcosystemSystem"; // acidityLevel, pollutionLevel, coralHealth, fishPopulations
+import { EcosystemState } from "../systems/EcosystemSystem";
 import { FishCatch } from "./FishingZone";
 
 export default class HUD {
@@ -10,6 +10,9 @@ export default class HUD {
   private sellFeedback:  Phaser.GameObjects.Text;
   private panel:         Phaser.GameObjects.Rectangle;
   private ecosystemText: Phaser.GameObjects.Text;
+  private menuBtn:       Phaser.GameObjects.Text;
+
+  public onMenuOpen?: () => void;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -48,6 +51,21 @@ export default class HUD {
         color: "#ffdd44", stroke: "#000", strokeThickness: 5,
       }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(30).setVisible(false);
+
+    // Menu button in top right
+    const cam = scene.cameras.main;
+    this.menuBtn = scene.add.text(cam.width - 12, py, "☰ Menu", {
+      fontSize: "15px", color: "#ffffff",
+      fontFamily: "monospace", stroke: "#000", strokeThickness: 3,
+      backgroundColor: "#0a2a3a", padding: { x: 12, y: 6 },
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(21)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerover",  function(this: Phaser.GameObjects.Text) { this.setAlpha(0.75); })
+      .on("pointerout",   function(this: Phaser.GameObjects.Text) { this.setAlpha(1); })
+      .on("pointerdown",  () => this.onMenuOpen?.());
+
+    // Escape key also opens menu
+    scene.input.keyboard!.on("keydown-ESC", () => this.onMenuOpen?.());
   }
 
   update(money: number, inventory: FishCatch[], season = 1, seasonName = "Spring", ecosystemState?: EcosystemState) {
@@ -66,9 +84,9 @@ export default class HUD {
     if (ecosystemState) {
       const { coralHealth, acidityLevel, pollutionLevel, biodiversityIndex } = ecosystemState;
       const coralStr = `🪸 ${coralHealth.toFixed(0)}%`;
-      const pollStr = `☣ ${pollutionLevel.toFixed(0)}%`;
-      const acidStr = `💧 pH ${acidityLevel.toFixed(2)}`;
-      const bioStr = `🌱 ${biodiversityIndex.toFixed(0)}%`;
+      const pollStr  = `☣ ${pollutionLevel.toFixed(0)}%`;
+      const acidStr  = `💧 pH ${acidityLevel.toFixed(2)}`;
+      const bioStr   = `🌱 ${biodiversityIndex.toFixed(0)}%`;
       this.ecosystemText.setText([coralStr, pollStr, acidStr, bioStr].join("  "));
     }
   }

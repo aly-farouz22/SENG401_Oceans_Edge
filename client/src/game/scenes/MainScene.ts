@@ -3,14 +3,14 @@ import Boat from "../objects/boat/Boat";
 import FishingZone from "../objects/FishingZone";
 import HUD from "../objects/HUD";
 import MarketZone from "../objects/MarketZone";
+import PauseMenu from "../objects/PauseMenu";
 import SeasonEndScreen from "../objects/SeasonEndScreen";
 import SeasonManager from "../objects/SeasonManager";
 import TrashZone from "../objects/TrashZone";
 import { EconomySystem } from "../systems/EconomySystem";
 import { EcosystemSystem } from "../systems/EcosystemSystem";
 import { EventSystem } from "../systems/EventSystem";
-//change water_bottle to uppercase
-//test 1
+
 export default class MainScene extends Phaser.Scene {
   private boat!:          Boat;
   private hud!:           HUD;
@@ -21,6 +21,7 @@ export default class MainScene extends Phaser.Scene {
   private economy!:       EconomySystem;
   private marketZones:    MarketZone[] = [];
   private eventSystem!:   EventSystem;
+  private pauseMenu!:     PauseMenu;
   private hasGameEnded =  false;
 
   constructor() { super("MainScene"); }
@@ -41,13 +42,14 @@ export default class MainScene extends Phaser.Scene {
     this.load.image("upgrade_net",    "/assets/Net_Upgrade.png");
     this.load.image("trash_bottle",   "/assets/Water_Bottle_Trash.png");
     this.load.image("trash_cigarette","/assets/Cigarette_Buds_Trash.png");
+    this.load.image("payment_bg", "/assets/Payment.png");
   }
 
   create() {
     this.cameras.main.setBackgroundColor("#0a3d6b");
 
-    this.ecosystem = new EcosystemSystem();
-    this.economy   = new EconomySystem();
+    this.ecosystem   = new EcosystemSystem();
+    this.economy     = new EconomySystem();
     this.eventSystem = new EventSystem(this.economy, this.ecosystem);
 
     this.economy.addRevenue(0);
@@ -72,6 +74,22 @@ export default class MainScene extends Phaser.Scene {
 
     this.hud = new HUD(this);
 
+    this.pauseMenu = new PauseMenu(this);
+
+    this.hud.onMenuOpen = () => this.pauseMenu.open();
+
+    this.pauseMenu.onResume = () => {};
+
+    this.pauseMenu.onExitToMenu = () => {
+      this.scene.restart();
+    };
+
+    this.pauseMenu.getGameState = () => ({
+      money:   this.economy.getBalance(),
+      season:  this.seasonManager.season,
+      balance: this.economy.getState().balance,
+    });
+
     this.eventSystem.onSpawnTrash = (x, y) => {
       this.spawnTrashZone(x, y);
     };
@@ -95,7 +113,6 @@ export default class MainScene extends Phaser.Scene {
       screen.onComplete = (canContinue) => {
         const totalCosts = econState.fuelCost + 20 + econState.maintenanceCost;
 
-        // Add earnings then deduct costs
         econState.balance += earned;
         econState.balance -= totalCosts;
 
