@@ -2,11 +2,31 @@ generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Stores one row per player — identified by a username they enter
 model Player {
-  id       String   @id @default(cuid())
-  name     String
-  money    Int      @default(0)
-  fish     Json     @default("[]") // Store fish as JSON for now
+  id        String   @id @default(cuid())
+  username  String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Each player has one game state (one-to-one relationship)
+  gameState GameState?
+}
+
+// Stores the full game state for a player as a JSON blob.
+// Using Json type means we can save money, fish, season,
+// ecosystem health all in one field without a complex schema.
+model GameState {
+  id        String   @id @default(cuid())
+  playerId  String   @unique
+  state     Json     // holds money, season, fish, ecosystem etc.
+  updatedAt DateTime @updatedAt
+
+  // Links back to the Player model
+  player    Player   @relation(fields: [playerId], references: [id])
 }
