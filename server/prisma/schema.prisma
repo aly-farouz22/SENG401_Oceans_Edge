@@ -1,0 +1,15 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // url removed, configure in prisma.config.ts
+}
+
+model GameSave {
+  id        Int      @id @default(autoincrement())
+  playerId  String
+  state     Json
+  createdAt DateTime @default(now())
+}
