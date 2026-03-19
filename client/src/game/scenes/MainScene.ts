@@ -1,4 +1,6 @@
 import Phaser from "phaser";
+import { AchievementManager } from "../achievements/AchievementManager";
+import { AchievementToast } from "../achievements/AchievementToast";
 import Boat from "../objects/boat/Boat";
 import FishingZone from "../objects/FishingZone";
 import HUD from "../objects/HUD";
@@ -22,7 +24,9 @@ export default class MainScene extends Phaser.Scene {
   private marketZones:    MarketZone[] = [];
   private eventSystem!:   EventSystem;
   private pauseMenu!:     PauseMenu;
+  private toast!:         AchievementToast;
   private hasGameEnded =  false;
+  private sceneReady   =  false;
 
   constructor() { super("MainScene"); }
 
@@ -42,108 +46,127 @@ export default class MainScene extends Phaser.Scene {
     this.load.image("upgrade_net",    "/assets/Net_Upgrade.png");
     this.load.image("trash_bottle",   "/assets/Water_Bottle_Trash.png");
     this.load.image("trash_cigarette","/assets/Cigarette_Buds_Trash.png");
-    this.load.image("payment_bg", "/assets/Payment.png");
+    this.load.image("payment_bg",     "/assets/Payment.png");
   }
 
   create() {
+    this.sceneReady   = false;
+    this.hasGameEnded = false;
     this.cameras.main.setBackgroundColor("#0a3d6b");
 
-    this.ecosystem   = new EcosystemSystem();
-    this.economy     = new EconomySystem();
-    this.eventSystem = new EventSystem(this.economy, this.ecosystem);
+    // init() is idempotent — instant no-op on restart, ~1ms on first load.
+    // All scene setup lives inside .then() so nothing runs before it resolves.
+    AchievementManager.instance.init().then(() => {
+      this.toast = new AchievementToast(this);
+      AchievementManager.instance.onUnlock = (def) => this.toast.show(def);
 
-    this.economy.addRevenue(0);
+      this.ecosystem   = new EcosystemSystem();
+      this.economy     = new EconomySystem();
+      this.eventSystem = new EventSystem(this.economy, this.ecosystem);
 
-    this.fishingZones = [
-      new FishingZone(this, 150, 350, 100, 100, "Shallow Reef"),
-      new FishingZone(this, 400, 300, 120, 120, "Deep Waters"),
-      new FishingZone(this, 650, 250, 140, 140, "Coral Bed"),
-    ];
+      this.economy.addRevenue(0);
 
-    this.marketZones = [
-      new MarketZone(this, 880, 120, 120, 80, "Market Dock"),
-    ];
+      this.fishingZones = [
+        new FishingZone(this, 150, 350, 100, 100, "Shallow Reef"),
+        new FishingZone(this, 400, 300, 120, 120, "Deep Waters"),
+        new FishingZone(this, 650, 250, 140, 140, "Coral Bed"),
+      ];
 
-    this.seasonManager = new SeasonManager(this, this.ecosystem);
-    this.seasonManager.registerZones(this.fishingZones);
+      this.marketZones = [
+        new MarketZone(this, 880, 120, 120, 80, "Market Dock"),
+      ];
 
-    this.boat = new Boat(this, 500, 384, this.ecosystem, this.economy);
-    this.boat.registerZones(this.fishingZones);
-    this.boat.registerMarketZones(this.marketZones);
-    this.marketZones.forEach(z => z.registerUpgrades(this.boat.upgrades));
+      AchievementManager.instance.updateStats({ totalTrashZones: 3 });
 
-    this.hud = new HUD(this);
+      this.seasonManager = new SeasonManager(this, this.ecosystem);
+      this.seasonManager.registerZones(this.fishingZones);
 
-    this.pauseMenu = new PauseMenu(this);
+      this.boat = new Boat(this, 500, 384, this.ecosystem, this.economy);
+      this.boat.registerZones(this.fishingZones);
+      this.boat.registerMarketZones(this.marketZones);
+      this.marketZones.forEach(z => z.registerUpgrades(this.boat.upgrades));
 
-    this.hud.onMenuOpen = () => this.pauseMenu.open();
+      this.hud = new HUD(this);
+      this.pauseMenu = new PauseMenu(this);
 
-    this.pauseMenu.onResume = () => {};
+      this.hud.onMenuOpen = () => this.pauseMenu.open();
+      this.pauseMenu.onResume = () => {};
 
-    this.pauseMenu.onExitToMenu = () => {
-      this.scene.restart();
-    };
+      this.pauseMenu.onExitToMenu = () => {
+        this.scene.restart();
+      };
 
-    this.pauseMenu.getGameState = () => ({
-      money:   this.economy.getBalance(),
-      season:  this.seasonManager.season,
-      balance: this.economy.getState().balance,
-    });
-
-    this.eventSystem.onSpawnTrash = (x, y) => {
-      this.spawnTrashZone(x, y);
-    };
-
-    this.boat.onSell = (earned, count) => {
-      this.hud.showSellFeedback(earned, count);
-    };
-
-    this.boat.onEndSeason = (earned, count) => {
-      const econState = this.economy.getState();
-
-      const screen = new SeasonEndScreen(this);
-      screen.show({
-        earnings:        earned,
-        fuelCost:        econState.fuelCost,
-        licenseFee:      20,
-        maintenanceCost: econState.maintenanceCost,
-        currentBalance:  econState.balance,
+      this.pauseMenu.getGameState = () => ({
+        money:   this.economy.getBalance(),
+        season:  this.seasonManager.season,
+        balance: this.economy.getState().balance,
       });
 
-      screen.onComplete = (canContinue) => {
-        const totalCosts = econState.fuelCost + 20 + econState.maintenanceCost;
-
-        econState.balance += earned;
-        econState.balance -= totalCosts;
-
-        if (econState.balance < 0) {
-          this.hasGameEnded = true;
-          this.showEvent("💀 Game Over", "You couldn't cover your seasonal costs!");
-          this.scene.pause();
-          return;
-        }
-
-        this.hud.showSellFeedback(earned, count);
-        this.economy.updateSeason();
-
-        const event = this.eventSystem.triggerRandomEvent();
-        if (event) this.showEvent(event.title, event.description);
-
-        const crisis = this.eventSystem.checkLowPopulationEvent();
-        if (crisis) this.showEvent(crisis.title, crisis.description);
-
-        this.seasonManager.advanceSeason();
+      this.eventSystem.onSpawnTrash = (x, y) => {
+        this.spawnTrashZone(x, y);
       };
-    };
 
-    this.seasonManager.onSeasonChange = (season, seasonName) => {
-      this.hud.showSeasonBanner(season, seasonName);
-    };
+      this.boat.onSell = (earned, count) => {
+        AchievementManager.instance.updateStats({ lifetimeEarnings: earned });
+        this.hud.showSellFeedback(earned, count);
+      };
 
-    // Test trash zones — remove once confirmed working
-    this.spawnTrashZone(250, 150);
-    this.spawnTrashZone(600, 400);
-    this.spawnTrashZone(750, 200);
+      this.boat.onEndSeason = (earned, count) => {
+        const econState = this.economy.getState();
+
+        const screen = new SeasonEndScreen(this);
+        screen.show({
+          earnings:        earned,
+          fuelCost:        econState.fuelCost,
+          licenseFee:      20,
+          maintenanceCost: econState.maintenanceCost,
+          currentBalance:  econState.balance,
+        });
+
+        screen.onComplete = (canContinue) => {
+          const totalCosts = econState.fuelCost + 20 + econState.maintenanceCost;
+
+          econState.balance += earned;
+          econState.balance -= totalCosts;
+
+          if (econState.balance < 0) {
+            AchievementManager.instance.updateStats({ gameOverCount: 1 });
+            this.hasGameEnded = true;
+            this.showEvent("💀 Game Over", "You couldn't cover your seasonal costs!");
+            this.scene.pause();
+            return;
+          }
+
+          AchievementManager.instance.updateStats({ seasonsCompleted: 1 });
+
+          if (econState.balance - earned + totalCosts < 0) {
+            AchievementManager.instance.updateStats({ recoveredFromNegative: true });
+          }
+
+          this.hud.showSellFeedback(earned, count);
+          this.economy.updateSeason();
+
+          const event = this.eventSystem.triggerRandomEvent();
+          if (event) this.showEvent(event.title, event.description);
+
+          const crisis = this.eventSystem.checkLowPopulationEvent();
+          if (crisis) this.showEvent(crisis.title, crisis.description);
+
+          this.seasonManager.advanceSeason();
+        };
+      };
+
+      this.seasonManager.onSeasonChange = (season, seasonName) => {
+        this.hud.showSeasonBanner(season, seasonName);
+      };
+
+      this.spawnTrashZone(250, 150);
+      this.spawnTrashZone(600, 400);
+      this.spawnTrashZone(750, 200);
+
+      // Set LAST — after everything is built
+      this.sceneReady = true;
+    });
   }
 
   private spawnTrashZone(x: number, y: number) {
@@ -159,6 +182,8 @@ export default class MainScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number) {
+    if (!this.sceneReady) return;
+
     const pollutionLevel = this.ecosystem.getState().pollutionLevel;
 
     this.fishingZones
@@ -178,6 +203,7 @@ export default class MainScene extends Phaser.Scene {
       this.seasonManager.seasonName,
       this.ecosystem.getState()
     );
+
     this.fishingZones
       .filter(z => !z.isGone)
       .forEach(z => z.updateRegen(delta));
@@ -192,11 +218,11 @@ export default class MainScene extends Phaser.Scene {
   private activeEventTexts: Phaser.GameObjects.Text[] = [];
 
   private showEvent(title: string, description: string) {
-    const cam = this.cameras.main;
-    const cx = cam.width / 2;
+    const cam     = this.cameras.main;
+    const cx      = cam.width / 2;
     const spacing = 80;
-    const startY = 60;
-    const y = startY + this.activeEventTexts.length * spacing;
+    const startY  = 60;
+    const y       = startY + this.activeEventTexts.length * spacing;
 
     const text = this.add.text(cx, y, `${title}\n${description}`, {
       fontSize: "20px",

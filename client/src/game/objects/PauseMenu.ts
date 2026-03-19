@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import BadgeGalleryScreen from "../achievements/BadgeGalleryScreen";
 
 const PLAYER_ID = "player_1";
 
@@ -27,7 +28,7 @@ export default class PauseMenu {
     const cx = W / 2;
     const cy = H / 2;
     const PW = 340;
-    const PH = 380;
+    const PH = 480; // taller to fit extra button
     const DEPTH = 400;
 
     const overlay = this.scene.add.rectangle(cx, cy, W, H, 0x000000, 0.75)
@@ -48,15 +49,16 @@ export default class PauseMenu {
     const divider = this.scene.add.rectangle(cx, cy - PH / 2 + 58, PW - 40, 1, 0xffffff, 0.2)
       .setScrollFactor(0).setDepth(DEPTH + 3);
 
-    const saveStatus = this.scene.add.text(cx, cy - 60, "", {
+    const saveStatus = this.scene.add.text(cx, cy - 100, "", {
       fontSize: "12px", color: "#44ff88",
       fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 3);
 
-    const btnResume = this.makeButton(cx, cy - 20,  "▶  Resume",        "#44ff88", DEPTH + 3);
-    const btnSave   = this.makeButton(cx, cy + 50,  "💾  Save Game",     "#66ccff", DEPTH + 3);
-    const btnExit   = this.makeButton(cx, cy + 120, "🏠  Exit to Menu",  "#ffaa44", DEPTH + 3);
-    const btnQuit   = this.makeButton(cx, cy + 190, "✖  Quit Game",      "#ff6666", DEPTH + 3);
+    const btnResume = this.makeButton(cx, cy - 60,  "▶  Resume",        "#44ff88", DEPTH + 3);
+    const btnBadges = this.makeButton(cx, cy + 5,  "🏅  Badges",        "#ffcc44", DEPTH + 3);
+    const btnSave   = this.makeButton(cx, cy + 70,  "💾  Save Game",     "#66ccff", DEPTH + 3);
+    const btnExit   = this.makeButton(cx, cy + 135, "🏠  Exit to Menu",  "#ffaa44", DEPTH + 3);
+    const btnQuit   = this.makeButton(cx, cy + 200, "✖  Quit Game",      "#ff6666", DEPTH + 3);
 
     // Resume
     btnResume.on("pointerdown", () => {
@@ -64,7 +66,18 @@ export default class PauseMenu {
       this.onResume?.();
     });
 
-    // Save — use .then() instead of async/await to avoid freezing
+    // Badges
+    btnBadges.on("pointerdown", () => {
+      this.close();
+      const gallery = new BadgeGalleryScreen(this.scene);
+      gallery.onClose = () => {
+        // Reopen pause menu when gallery is closed
+        this.scene.time.delayedCall(100, () => this.open());
+      };
+      gallery.show();
+    });
+
+    // Save
     btnSave.on("pointerdown", () => {
       const state = this.getGameState?.() ?? {};
       saveStatus.setColor("#66ccff").setText("💾 Saving...");
@@ -106,7 +119,7 @@ export default class PauseMenu {
     });
 
     const all = [overlay, panel, border, title, divider, saveStatus,
-                 btnResume, btnSave, btnExit, btnQuit];
+                 btnResume, btnBadges, btnSave, btnExit, btnQuit];
 
     this.container = this.scene.add.container(0, 0, all).setDepth(DEPTH);
 

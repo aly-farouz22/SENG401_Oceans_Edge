@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { AchievementManager } from "../../achievements/AchievementManager";
 import CatchPopup from "../CatchPopup";
 import FishingZone, { FishCatch } from "../FishingZone";
 import TrashZone from "../TrashZone";
@@ -65,7 +66,6 @@ export default class BoatFishing {
     const isInTrashZone = activeTrashZone !== null;
     const isInAnyZone   = isInFishZone || isInTrashZone;
 
-    // Update prompt text based on zone type
     this.promptText
       .setPosition(x, y - 28)
       .setText(isInTrashZone ? "SPACE to collect trash" : "SPACE to fish")
@@ -89,7 +89,6 @@ export default class BoatFishing {
     this.promptText.setVisible(false);
     this.barBg.setVisible(true);
 
-    // Blue bar for fish, brown bar for trash
     this.bar
       .setFillStyle(isTrash ? 0x886633 : 0x00aaff)
       .setVisible(true)
@@ -110,12 +109,25 @@ export default class BoatFishing {
     let fish: FishCatch | null = null;
 
     if (this.activeTrashZone && !this.activeTrashZone.isGone) {
-      // Pick a random trash item
       fish = TRASH_CATCHES[Phaser.Math.Between(0, TRASH_CATCHES.length - 1)];
-      // Each cast removes some trash from the zone
       this.activeTrashZone.collectTrash();
+
+      // ── Achievement: trash collected ──────────────────────────────────────
+      AchievementManager.instance.updateStats({ trashZonesCleaned: 1 });
+      console.log("Stats after catch:", AchievementManager.instance.getStats());
+
+
     } else {
       fish = this.activeZone?.castLine() ?? null;
+
+      if (fish) {
+        // ── Achievement: fish caught ────────────────────────────────────────
+        const isRare = fish.rarity === "rare" || fish.rarity === "legendary";
+        AchievementManager.instance.updateStats({
+          totalFishCaught: 1,
+          ...(isRare ? { rareFishCaught: 1 } : {}),
+        });
+      }
     }
 
     if (fish) {
