@@ -5,8 +5,7 @@ import BoatUpgrade from "./boat/BoatUpgrade";
 export type MarketChoice = "sell" | "upgrade" | "end_season" | "cancel";
 
 export default class MarketZone extends Phaser.GameObjects.Zone {
-  private glowRect:   Phaser.GameObjects.Rectangle;
-  private glowBorder: Phaser.GameObjects.Rectangle;
+  private sprite:     Phaser.GameObjects.Image;
   private label:      Phaser.GameObjects.Text;
 
   private overlay!:      Phaser.GameObjects.Rectangle;
@@ -20,7 +19,6 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
   private btnUpgrade!:   Phaser.GameObjects.Text;
   private divider!:      Phaser.GameObjects.Rectangle;
 
-  // Upgrade panel elements
   private upgradePanel!:       Phaser.GameObjects.Rectangle;
   private upgradePanelBorder!: Phaser.GameObjects.Rectangle;
   private upgradeTitleText!:   Phaser.GameObjects.Text;
@@ -46,18 +44,21 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     scene.add.existing(this);
     scene.physics.add.existing(this, true);
 
-    this.glowRect = scene.add.rectangle(x, y, width, height, 0xffaa00, 0.15);
-    this.glowBorder = scene.add.rectangle(x, y, width, height)
-      .setStrokeStyle(2, 0xffcc44, 0.8).setFillStyle(0, 0);
+    // ── Harbour sprite (replaces glowRect + glowBorder) ──────────────────────
+    this.sprite = scene.add.image(x, y, "market_dock")
+      .setDisplaySize(width * 2, height * 2)
+      .setDepth(5);
 
-  scene.tweens.add({
-    targets: [this.glowRect, this.glowBorder],
-    alpha: { from: 0.15, to: 0.45 },
-    duration: 3000,  // slower
-    yoyo: true,
-    repeat: -1,
-    ease: "Sine.easeInOut",
-  });
+    // Gentle pulse on the sprite alpha instead of rectangle glow
+    scene.tweens.add({
+      targets: this.sprite,
+      alpha: { from: 0.85, to: 1 },
+      duration: 1800,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+
     this.label = scene.add.text(x, y - height / 2 - 14, `🏪 ${name}`, {
       fontSize: "13px", color: "#ffdd88",
       stroke: "#332200", strokeThickness: 3, fontFamily: "monospace",
@@ -99,11 +100,12 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
 
     this.divider = scene.add.rectangle(cx, cy - 36, PW - 40, 1, 0xffcc44, 0.4)
       .setScrollFactor(0).setDepth(DEPTH + 3).setVisible(false);
+
     const spacing = 50;
-    this.btnSell      = this.makeButton(scene, cx, cy - spacing+40, "💰  Sell Fish",          "#44ff88", DEPTH + 3);
-    this.btnUpgrade   = this.makeButton(scene, cx, cy+40, "⚙  Buy Upgrades",        "#66ccff", DEPTH + 3);
-    this.btnEndSeason = this.makeButton(scene, cx, cy + spacing+40, "🌿  End Season & Sell",  "#ffaa44", DEPTH + 3);
-    this.btnCancel    = this.makeButton(scene, cx, cy + spacing * 2+40,"✖  Cancel",              "#ff6666", DEPTH + 3);
+    this.btnSell      = this.makeButton(scene, cx, cy - spacing + 40, "💰  Sell Fish",         "#44ff88", DEPTH + 3);
+    this.btnUpgrade   = this.makeButton(scene, cx, cy + 40,           "⚙  Buy Upgrades",       "#66ccff", DEPTH + 3);
+    this.btnEndSeason = this.makeButton(scene, cx, cy + spacing + 40, "🌿  End Season & Sell", "#ffaa44", DEPTH + 3);
+    this.btnCancel    = this.makeButton(scene, cx, cy + spacing * 2 + 40, "✖  Cancel",          "#ff6666", DEPTH + 3);
   }
 
   private buildUpgradePanel(scene: Phaser.Scene) {
@@ -171,22 +173,20 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
   }
 
   private showUpgradePanel(inventory: FishCatch[]) {
-    // Hide main menu
     const mainAll = [this.overlay, this.panel, this.panelBorder, this.titleText,
                      this.subtitleText, this.divider, this.btnSell, this.btnUpgrade,
                      this.btnEndSeason, this.btnCancel];
     mainAll.forEach(el => el.setVisible(false));
 
-    // Destroy old upgrade item rows
     this.upgradeItems.forEach(t => t.destroy());
     this.upgradeBtns.forEach(t => t.destroy());
     this.upgradeItems = [];
     this.upgradeBtns  = [];
 
-    const cam = this.scene.cameras.main;
-    const cx  = cam.width / 2;
-    const cy  = cam.height / 2;
-    const PH  = 380;
+    const cam   = this.scene.cameras.main;
+    const cx    = cam.width / 2;
+    const cy    = cam.height / 2;
+    const PH    = 380;
     const DEPTH = 113;
 
     const upgrades = this.boatUpgrade?.displayUpgrades() ?? [];
@@ -211,10 +211,8 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
         buyBtn.on("pointerdown", () => {
           const ok = this.boatUpgrade?.purchaseUpgrade(u.name);
           if (ok) {
-            // Refresh panel after purchase
             this.showUpgradePanel(inventory);
           } else {
-            // Flash red to indicate can't afford
             buyBtn.setColor("#ff4444");
             this.scene.time.delayedCall(400, () => buyBtn.setColor("#44ff88"));
           }
@@ -225,11 +223,9 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
       this.upgradeBtns.push(buyBtn);
     });
 
-    // Back button
     this.upgradeBackBtn.removeAllListeners("pointerdown");
     this.upgradeBackBtn.on("pointerdown", () => {
       this.hideUpgradePanel();
-      // Re-show main menu
       const all = [this.overlay, this.panel, this.panelBorder, this.titleText,
                    this.subtitleText, this.divider, this.btnSell, this.btnUpgrade,
                    this.btnEndSeason, this.btnCancel];
@@ -271,9 +267,8 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
   }
 
   destroy(fromScene?: boolean) {
+    this.sprite?.destroy();
     this.label?.destroy();
-    this.glowRect?.destroy();
-    this.glowBorder?.destroy();
     this.overlay?.destroy();
     this.panel?.destroy();
     this.panelBorder?.destroy();

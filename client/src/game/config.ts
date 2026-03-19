@@ -11,5 +11,9 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     default: "arcade",
     arcade: { debug: false }
   },
+  render: {
+    pixelArt: true,
+    antialias: false,
+  },
   scene: [BootScene, MainScene]
 };

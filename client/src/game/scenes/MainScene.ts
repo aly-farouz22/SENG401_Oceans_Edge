@@ -47,16 +47,23 @@ export default class MainScene extends Phaser.Scene {
     this.load.image("trash_bottle",   "/assets/Water_Bottle_Trash.png");
     this.load.image("trash_cigarette","/assets/Cigarette_Buds_Trash.png");
     this.load.image("payment_bg",     "/assets/Payment.png");
+    this.load.image("ocean_bg",    "/assets/Ocean_bg.png");
+    this.load.image("market_dock", "/assets/Harbour.png");
+    this.load.image("fishing_zone","/assets/FishingZone.png");
   }
 
   create() {
     this.sceneReady   = false;
     this.hasGameEnded = false;
-    this.cameras.main.setBackgroundColor("#0a3d6b");
+   // this.cameras.main.setBackgroundColor("#1d52a8");
 
     // init() is idempotent — instant no-op on restart, ~1ms on first load.
     // All scene setup lives inside .then() so nothing runs before it resolves.
     AchievementManager.instance.init().then(() => {
+      this.add.image(512, 384, "ocean_bg")
+      .setDisplaySize(1024, 768)
+      .setScrollFactor(0)
+      .setDepth(0);
       this.toast = new AchievementToast(this);
       AchievementManager.instance.onUnlock = (def) => this.toast.show(def);
 

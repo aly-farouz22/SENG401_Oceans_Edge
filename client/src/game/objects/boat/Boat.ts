@@ -73,6 +73,7 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
 
     this.setScale(1);
+    this.setDepth(7);
 
     const eco = economy ?? new EconomySystem();
 

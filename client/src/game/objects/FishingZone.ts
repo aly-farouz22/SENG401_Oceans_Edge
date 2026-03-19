@@ -35,19 +35,20 @@ const BAR_WIDTH      = 64;
 const BAR_HEIGHT     = 8;
 const MAX_STOCK      = 6;
 const DEPLETE_AMOUNT = 1;
-const REGEN_RATE     = 0.04;
+const BASE_REGEN     = 0.04;  // base regen per second — scaled by ProgressionSystem
 const FADE_DURATION  = 800;
 
 export default class FishingZone extends Phaser.GameObjects.Zone {
-  private label:      Phaser.GameObjects.Text;
-  private glowCircle: Phaser.GameObjects.Arc;
-  private barBg:      Phaser.GameObjects.Rectangle;
-  private barFill:    Phaser.GameObjects.Rectangle;
-  private emptyText:  Phaser.GameObjects.Text;
+  private label:    Phaser.GameObjects.Text;
+  private sprite:   Phaser.GameObjects.Image;
+  private barBg:    Phaser.GameObjects.Rectangle;
+  private barFill:  Phaser.GameObjects.Rectangle;
+  private emptyText: Phaser.GameObjects.Text;
 
-  private stock = MAX_STOCK;
-  private barY:  number;
-  private _destroyed = false;
+  private stock        = MAX_STOCK;
+  private regenRate    = 1.0;  // multiplier from ProgressionSystem (1.0 = normal)
+  private barY:        number;
+  private _destroyed   = false;
   private pollutionLevel = 0;
 
   get isEmpty()  { return this.stock <= 0; }
@@ -64,14 +65,26 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
     scene.physics.add.existing(this, true);
 
     const radius = Math.min(width, height) / 2;
-    this.barY = y - radius - 22;
+    this.barY    = y - radius - 22;
 
-    this.glowCircle = scene.add.circle(x, y, radius, 0x00aaff, 0.18);
+    // ── FishingZone sprite (replaces glowCircle) ──────────────────────────────
+    // Compute scale to reach 1.5x zone size from actual texture dimensions
+    const texW       = scene.textures.get("fishing_zone").getSourceImage().width  || 1;
+    const texH       = scene.textures.get("fishing_zone").getSourceImage().height || 1;
+    const baseScaleX = (width  * 1.5) / texW;
+    const baseScaleY = (height * 1.5) / texH;
+
+    this.sprite = scene.add.image(x, y, "fishing_zone")
+      .setScale(baseScaleX, baseScaleY)
+      .setDepth(4)
+      .setAlpha(0.85);
+
+    // Gentle pulse like the old glow circle
     scene.tweens.add({
-      targets: this.glowCircle,
-      alpha:  { from: 0.1,  to: 0.35 },
-      scaleX: { from: 0.95, to: 1.05 },
-      scaleY: { from: 0.95, to: 1.05 },
+      targets: this.sprite,
+      alpha:  { from: 0.55, to: 0.95 },
+      scaleX: { from: baseScaleX * 0.95, to: baseScaleX * 1.05 },
+      scaleY: { from: baseScaleY * 0.95, to: baseScaleY * 1.05 },
       duration: 1400, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
     });
 
@@ -93,22 +106,24 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
     }).setOrigin(0.5, 1).setDepth(10).setVisible(false);
   }
 
+  /** Called by ProgressionSystem each season. rate=1.0 is normal, 0.5 = half speed. */
+  setRegenRate(rate: number) {
+    this.regenRate = Math.max(0.1, rate);
+  }
+
   setPollution(level: number) {
     this.pollutionLevel = Math.max(0, Math.min(100, level));
-    const t = this.pollutionLevel / 100;
-    const color = Phaser.Display.Color.Interpolate.ColorWithColor(
-      Phaser.Display.Color.ValueToColor(0x00aaff),
-      Phaser.Display.Color.ValueToColor(0x886633),
-      100, Math.round(t * 100)
-    );
-    this.glowCircle.setFillStyle(
-      Phaser.Display.Color.GetColor(color.r, color.g, color.b)
-    );
+    const t     = this.pollutionLevel / 100;
+    // Tint sprite from clean blue → murky brown as pollution rises
+    const r = Math.round(Phaser.Math.Linear(0x00, 0x88, t));
+    const g = Math.round(Phaser.Math.Linear(0xaa, 0x66, t));
+    const b = Math.round(Phaser.Math.Linear(0xff, 0x33, t));
+    this.sprite.setTint(Phaser.Display.Color.GetColor(r, g, b));
   }
 
   updateRegen(delta: number) {
     if (this._destroyed || this.stock >= MAX_STOCK) return;
-    this.stock = Math.min(MAX_STOCK, this.stock + REGEN_RATE * (delta / 1000));
+    this.stock = Math.min(MAX_STOCK, this.stock + BASE_REGEN * this.regenRate * (delta / 1000));
     this.refreshBar();
   }
 
@@ -117,8 +132,8 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
     this.stock = Math.min(MAX_STOCK, this.stock + amount);
     this.refreshBar();
     this.scene.tweens.add({
-      targets: this.glowCircle,
-      alpha: { from: 0.8, to: 0.18 },
+      targets: this.sprite,
+      alpha: { from: 0.95, to: 0.55 },
       duration: 600,
       ease: "Cubic.easeOut",
     });
@@ -127,7 +142,6 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
   castLine(): FishCatch | null {
     if (this.isEmpty || this._destroyed) return null;
 
-    // Determine catch first
     let result: FishCatch | null = null;
 
     const trashChance = (this.pollutionLevel / 100) * 40;
@@ -147,7 +161,6 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
       result = pool.length ? pool[Phaser.Math.Between(0, pool.length - 1)] : null;
     }
 
-    // Only deplete stock for non-invasive catches
     if (!result?.invasive) {
       this.stock = Math.max(0, this.stock - DEPLETE_AMOUNT);
       this.refreshBar();
@@ -166,7 +179,7 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
     const body = this.body as Phaser.Physics.Arcade.StaticBody | null;
     if (body) body.enable = false;
 
-    const targets = [this.glowCircle, this.label, this.barBg, this.barFill, this.emptyText];
+    const targets = [this.sprite, this.label, this.barBg, this.barFill, this.emptyText];
     this.scene.tweens.add({
       targets,
       alpha: 0,
@@ -199,15 +212,16 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
       Phaser.Display.Color.GetColor(color.r, color.g, color.b)
     );
 
-    this.glowCircle.setAlpha(0.05 + 0.25 * pct);
+    // Fade sprite with stock level
+    this.sprite.setAlpha(0.3 + 0.65 * pct);
     this.emptyText.setVisible(this.isEmpty);
   }
 
   destroy(fromScene?: boolean) {
     if (this._destroyed) return;
     this._destroyed = true;
+    this.sprite?.destroy();
     this.label?.destroy();
-    this.glowCircle?.destroy();
     this.barBg?.destroy();
     this.barFill?.destroy();
     this.emptyText?.destroy();
