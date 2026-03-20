@@ -29,7 +29,7 @@ export default class PauseMenu {
     const cy = H / 2;
     const PW = 340;
     const PH = 480; // taller to fit extra button
-    const DEPTH = 400;
+    const DEPTH = 500;
 
     const overlay = this.scene.add.rectangle(cx, cy, W, H, 0x000000, 0.75)
       .setScrollFactor(0).setDepth(DEPTH);
@@ -57,8 +57,9 @@ export default class PauseMenu {
     const btnResume = this.makeButton(cx, cy - 60,  "▶  Resume",        "#44ff88", DEPTH + 3);
     const btnBadges = this.makeButton(cx, cy + 5,  "🏅  Badges",        "#ffcc44", DEPTH + 3);
     const btnSave   = this.makeButton(cx, cy + 70,  "💾  Save Game",     "#66ccff", DEPTH + 3);
-    const btnExit   = this.makeButton(cx, cy + 135, "🏠  Exit to Menu",  "#ffaa44", DEPTH + 3);
-    const btnQuit   = this.makeButton(cx, cy + 200, "✖  Quit Game",      "#ff6666", DEPTH + 3);
+    const btnLoad   = this.makeButton(cx, cy + 135, "📂  Load Game",   "#66ffcc", DEPTH + 3);
+    const btnExit   = this.makeButton(cx, cy + 200, "🏠  Exit to Menu",  "#ffaa44", DEPTH + 3);
+    const btnQuit   = this.makeButton(cx, cy + 265, "✖  Quit Game",      "#ff6666", DEPTH + 3);
 
     // Resume
     btnResume.on("pointerdown", () => {
@@ -96,6 +97,23 @@ export default class PauseMenu {
           this.scene.time.delayedCall(2000, () => saveStatus.setText(""));
         });
     });
+    // Load
+    btnLoad.on("pointerdown", async () => {
+      saveStatus.setColor("#66ffcc").setText("📂 Loading saves...");
+      try {
+        const res = await fetch(`/api/game/saves/${PLAYER_ID}`);
+        const data = await res.json();
+        if (data.success && data.saves.length > 0) {
+          this.showLoadModal(data.saves); // show modal to pick save
+        } else {
+          saveStatus.setText("❌ No saves found");
+          this.scene.time.delayedCall(2000, () => saveStatus.setText(""));
+        }
+      } catch {
+        saveStatus.setText("❌ Failed to fetch saves");
+        this.scene.time.delayedCall(2000, () => saveStatus.setText(""));
+      }
+    });
 
     // Exit to BootScene
     btnExit.on("pointerdown", () => {
@@ -118,6 +136,7 @@ export default class PauseMenu {
       this.onResume?.();
     });
 
+
     const all = [overlay, panel, border, title, divider, saveStatus,
                  btnResume, btnBadges, btnSave, btnExit, btnQuit];
 
@@ -128,6 +147,60 @@ export default class PauseMenu {
       targets: all, alpha: 1, duration: 200, ease: "Cubic.easeOut",
     });
   }
+  private showLoadModal(saves: any[]) {
+    const scene = this.scene;
+    const W = scene.cameras.main.width;
+    const H = scene.cameras.main.height;
+    const cx = W / 2;
+    const cy = H / 2;
+    const DEPTH = 600;
+
+    const overlay = scene.add.rectangle(cx, cy, W, H, 0x000000, 0.8)
+      .setScrollFactor(0).setDepth(DEPTH)
+      .setInteractive({ useHandCursor: true });
+    
+    const panel = scene.add.rectangle(cx, cy, 360, 400, 0x002233, 1)
+      .setScrollFactor(0).setDepth(DEPTH + 1);
+
+    const closeBtn = scene.add.text(cx, cy + 180, "✖ Close", {
+      fontSize: "16px", fontFamily: "monospace",
+      color: "#ff6666", backgroundColor: "#001a2e",
+      padding: { x: 20, y: 10 },
+    }).setOrigin(0.5).setDepth(DEPTH + 2)
+      .setInteractive({ useHandCursor: true });
+
+    closeBtn.on("pointerdown", () => {
+      overlay.destroy();
+      panel.destroy();
+      closeBtn.destroy();
+      listTexts.forEach(t => t.destroy());
+    });
+
+    const listTexts: Phaser.GameObjects.Text[] = [];
+    saves.forEach((save, i) => {
+      const t = scene.add.text(cx, cy - 160 + i * 40, `⏱ ${new Date(save.createdAt).toLocaleString()}`, {
+        fontSize: "14px", fontFamily: "monospace",
+        color: "#44ffcc", backgroundColor: "#001a2e",
+        padding: { x: 10, y: 6 }
+      }).setOrigin(0.5).setDepth(DEPTH + 2)
+        .setInteractive({ useHandCursor: true });
+
+      t.on("pointerdown", () => {
+        this.close();
+        fetch("/api/game/load/" + PLAYER_ID)
+          .then(res => res.json())
+          .then(data => {
+            if (this.getGameState) {
+              this.getGameState(); // could pass data to MainScene.applySavedGame
+              // Implement your MainScene.applySavedGame call here
+              scene.events.emit("loadGameState", data);
+            }
+          });
+      });
+      listTexts.push(t);
+    });
+  }
+
 
   private makeButton(x: number, y: number, label: string, color: string, depth: number) {
     return this.scene.add.text(x, y, label, {
