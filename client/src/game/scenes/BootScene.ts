@@ -1,10 +1,16 @@
 import Phaser from "phaser";
 import { AchievementManager } from "../achievements/AchievementManager";
 import BadgeGalleryScreen from "../achievements/BadgeGalleryScreen";
+import { loadGame } from "../../services/api";
+
+// Stored globally so MainScene can read it when it starts
+export let currentUsername = "";
 
 export default class BootScene extends Phaser.Scene {
   private loadComplete = false;
   private playButton: Phaser.GameObjects.Text | null = null;
+  private usernameInput: Phaser.GameObjects.DOMElement | null = null;
+  private usernameValue = "";
 
   constructor() {
     super("BootScene");
@@ -12,9 +18,7 @@ export default class BootScene extends Phaser.Scene {
 
   preload() {
     this.createTitleScreen();
-
     this.load.image("boat", "/assets/boat.png");
-
     this.load.on("complete", () => {
       this.loadComplete = true;
       this.showPlayButton();
@@ -22,9 +26,8 @@ export default class BootScene extends Phaser.Scene {
   }
 
   create() {
-    // Init achievements so the gallery works from the boot screen too
+    // Enable DOM elements — required for the HTML input field
     AchievementManager.instance.init();
-
     if (this.loadComplete) {
       this.showPlayButton();
     }
@@ -80,6 +83,40 @@ export default class BootScene extends Phaser.Scene {
     const loadingText = this.children.getByName("loadingText") as Phaser.GameObjects.Text | null;
     if (loadingText) loadingText.setVisible(false);
 
+    // ── Username label ────────────────────────────────────────────────────
+    this.add.text(cx, cy - 10, "Enter your username:", {
+      fontSize:   "14px",
+      color:      "#a0e8ff",
+      fontFamily: "monospace",
+    }).setOrigin(0.5);
+
+    // ── Username input (HTML DOM element overlaid on canvas) ──────────────
+    // Phaser's add.dom() lets us embed real HTML elements in the game.
+    // This is the cleanest way to get a text input in Phaser.
+    const inputEl = document.createElement("input");
+    inputEl.type        = "text";
+    inputEl.placeholder = "e.g. captain123";
+    inputEl.maxLength   = 20;
+    inputEl.style.cssText = `
+      width: 220px;
+      padding: 8px 12px;
+      font-size: 16px;
+      font-family: monospace;
+      background: #001a2e;
+      color: #a0e8ff;
+      border: 2px solid #336677;
+      border-radius: 4px;
+      outline: none;
+      text-align: center;
+    `;
+
+    this.usernameInput = this.add.dom(cx, cy + 20, inputEl).setDepth(10);
+
+    // Track what the player types
+    inputEl.addEventListener("input", () => {
+      this.usernameValue = inputEl.value.trim();
+    });
+
     // ── Play button ───────────────────────────────────────────────────────
     this.playButton = this.add
       .text(cx, cy + 80, "▶  Click to Play", {
@@ -98,7 +135,28 @@ export default class BootScene extends Phaser.Scene {
 
     this.playButton.on("pointerover", () => this.playButton?.setColor("#ffffff"));
     this.playButton.on("pointerout",  () => this.playButton?.setColor("#44ffaa"));
-    this.playButton.on("pointerdown", () => {
+    this.playButton.on("pointerdown", async () => {
+      // Require a username before starting
+      if (!this.usernameValue) {
+        inputEl.style.borderColor = "#ff4444";
+        setTimeout(() => { inputEl.style.borderColor = "#336677"; }, 1000);
+        return;
+      }
+
+      // Store username globally so MainScene can read it
+      currentUsername = this.usernameValue;
+
+      // Check if there's a saved game for this username
+      const saved = await loadGame(this.usernameValue);
+      if (saved) {
+        // TODO: show "Continue" vs "New Game" choice
+        // For now just start MainScene — saved state can be loaded there
+        console.log("Saved game found for", this.usernameValue);
+      }
+
+      // Remove the input field before transitioning
+      this.usernameInput?.destroy();
+
       this.tweens.killTweensOf(this.playButton!);
       this.cameras.main.fadeOut(500, 0, 0, 0);
       this.cameras.main.once("camerafadeoutcomplete", () => {
@@ -125,7 +183,7 @@ export default class BootScene extends Phaser.Scene {
     badgesBtn.on("pointerout",  () => badgesBtn.setAlpha(1));
     badgesBtn.on("pointerdown", () => {
       const gallery = new BadgeGalleryScreen(this);
-      gallery.onClose = () => {}; // just close, stay on boot screen
+      gallery.onClose = () => {};
       gallery.show();
     });
 

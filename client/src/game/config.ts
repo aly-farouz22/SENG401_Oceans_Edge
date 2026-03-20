@@ -7,6 +7,9 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   width: 1024,
   height: 768,
   parent: "game-container",
+  dom: {
+    createContainer: true,
+  },
   physics: {
     default: "arcade",
     arcade: { debug: false }
