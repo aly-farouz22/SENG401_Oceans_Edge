@@ -3,6 +3,7 @@ import { logChoice } from "../../../services/api";
 import { currentUsername } from "../../scenes/BootScene";
 import { EconomySystem } from "../../systems/EconomySystem";
 import { EcosystemSystem, FishSpecies } from "../../systems/EcosystemSystem";
+import { FuelSystem } from "../../systems/FuelSystem";
 import FishingZone from "../FishingZone";
 import MarketZone from "../MarketZone";
 import TrashZone from "../TrashZone";
@@ -23,12 +24,14 @@ interface BoatModules {
 export default class Boat extends Phaser.Physics.Arcade.Sprite {
   private _m!: BoatModules;
 
-  get money()       { return this._m.inventory.money; }
-  get fish()        { return this._m.inventory.fish; }
-  get upgrades()    { return this._m.upgrades; }
-  get economy()     { return this._m.economy; }
-  get fishing()     { return this._m.fishing; }
-  get boatMovement(){ return this._m.movement; }
+  public fuelSystem!: FuelSystem;
+
+  get money()        { return this._m.inventory.money; }
+  get fish()         { return this._m.inventory.fish; }
+  get upgrades()     { return this._m.upgrades; }
+  get economy()      { return this._m.economy; }
+  get fishing()      { return this._m.fishing; }
+  get boatMovement() { return this._m.movement; }
 
   set onSell(cb: (earned: number, count: number) => void) {
     this._m.inventory.onSell = cb;
@@ -54,7 +57,7 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, "boat");
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    this.setScale(1).setDepth(7);
+    this.setScale(1).setDepth(20);
 
     const eco       = economy ?? new EconomySystem();
     const movement  = new BoatMovement(scene, this);
@@ -66,6 +69,9 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
     inventory.registerUpgrades(upgrades);
     fishing.isInventoryFull = () => inventory.isFull;
 
+    // ── Fuel system ──────────────────────────────────────────────────────────
+    this.fuelSystem        = new FuelSystem();
+    movement.fuelSystem    = this.fuelSystem;
 
     fishing.onCatch = (fish) => {
       inventory.addFish(fish);
@@ -84,16 +90,13 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
         ecosystemFish.regenerationRate *= 0.9;
       }
 
-      // Log endangered catch to the database so we can track
-      // whether players are making sustainable choices — SDG 14
       if (fish.endangered && currentUsername) {
         logChoice(currentUsername, "caught_endangered", {
           fishName: fish.name,
-          season:   undefined, // MainScene season not accessible here
+          season:   undefined,
         });
       }
 
-      // Log invasive species catch — these should be caught freely
       if (fish.invasive && currentUsername) {
         logChoice(currentUsername, "caught_invasive", {
           fishName: fish.name,
@@ -130,7 +133,7 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
-  tick() {
+  tick(delta = 16) {
     let activeZone: FishingZone | null = null;
     for (const [zone, count] of this.zoneOverlaps.entries()) {
       if (count > 0) { activeZone = zone; break; }
@@ -147,7 +150,7 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
     for (const zone of this.trashZoneOverlaps.keys()) this.trashZoneOverlaps.set(zone, 0);
     this.marketOverlaps = 0;
 
-    this._m.movement.update(this._m.fishing.isFishing);
+    this._m.movement.update(this._m.fishing.isFishing, delta);
     this._m.fishing.update(activeZone, activeTrashZone, isAtMarket);
     this._m.inventory.update(isAtMarket);
   }

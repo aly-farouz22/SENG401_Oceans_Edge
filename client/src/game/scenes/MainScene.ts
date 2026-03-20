@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { logChoice, saveGame, saveOutcome } from "../../services/api";
 import { AchievementManager } from "../achievements/AchievementManager";
 import { AchievementToast } from "../achievements/AchievementToast";
 import Boat from "../objects/boat/Boat";
@@ -13,7 +14,6 @@ import { EconomySystem } from "../systems/EconomySystem";
 import { EcosystemSystem } from "../systems/EcosystemSystem";
 import { EventSystem } from "../systems/EventSystem";
 import { currentUsername } from "./BootScene";
-import { saveGame, saveOutcome, logChoice } from "../../services/api";
 
 export default class MainScene extends Phaser.Scene {
   private boat!:          Boat;
@@ -92,8 +92,11 @@ export default class MainScene extends Phaser.Scene {
       this.boat.registerZones(this.fishingZones);
       this.boat.registerMarketZones(this.marketZones);
       this.marketZones.forEach(z => z.registerUpgrades(this.boat.upgrades));
+      this.marketZones.forEach(z => z.registerFuel(this.boat.fuelSystem, this.economy));
+
 
       this.hud = new HUD(this);
+      this.hud.registerFuel(this.boat.fuelSystem);
       this.pauseMenu = new PauseMenu(this);
 
       this.hud.onMenuOpen = () => this.pauseMenu.open();
@@ -246,7 +249,8 @@ export default class MainScene extends Phaser.Scene {
       .filter(z => !z.isGone)
       .forEach(z => z.update(delta));
 
-    this.boat.tick();
+    this.boat.tick(delta);
+
     this.seasonManager.update(delta);
     this.hud.update(
       this.boat.money,

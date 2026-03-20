@@ -1,4 +1,6 @@
 import Phaser from "phaser";
+import { EconomySystem } from "../systems/EconomySystem";
+import { FUEL_COST, FuelSystem } from "../systems/FuelSystem";
 import { FishCatch } from "./FishingZone";
 import BoatUpgrade from "./boat/BoatUpgrade";
 
@@ -14,6 +16,7 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
   private titleText!:    Phaser.GameObjects.Text;
   private subtitleText!: Phaser.GameObjects.Text;
   private btnSell!:      Phaser.GameObjects.Text;
+  private btnFuel!:      Phaser.GameObjects.Text;
   private btnEndSeason!: Phaser.GameObjects.Text;
   private btnCancel!:    Phaser.GameObjects.Text;
   private btnUpgrade!:   Phaser.GameObjects.Text;
@@ -30,7 +33,9 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
   private _menuOpen = false;
   get menuOpen() { return this._menuOpen; }
 
-  private boatUpgrade: BoatUpgrade | null = null;
+  private boatUpgrade: BoatUpgrade    | null = null;
+  private fuelSystem:  FuelSystem     | null = null;
+  private economy:     EconomySystem  | null = null;
 
   onChoice?: (choice: MarketChoice, inventory: FishCatch[]) => void;
 
@@ -44,20 +49,9 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     scene.add.existing(this);
     scene.physics.add.existing(this, true);
 
-    // ── Harbour sprite (replaces glowRect + glowBorder) ──────────────────────
     this.sprite = scene.add.image(x, y, "market_dock")
       .setDisplaySize(width * 2, height * 2)
       .setDepth(5);
-
-    // Gentle pulse on the sprite alpha instead of rectangle glow
-    scene.tweens.add({
-      targets: this.sprite,
-      alpha: { from: 0.85, to: 1 },
-      duration: 1800,
-      yoyo: true,
-      repeat: -1,
-      ease: "Sine.easeInOut",
-    });
 
     this.label = scene.add.text(x, y - height / 2 - 14, `🏪 ${name}`, {
       fontSize: "13px", color: "#ffdd88",
@@ -72,11 +66,16 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     this.boatUpgrade = boatUpgrade;
   }
 
+  registerFuel(fuelSystem: FuelSystem, economy: EconomySystem) {
+    this.fuelSystem = fuelSystem;
+    this.economy    = economy;
+  }
+
   private buildOverlay(scene: Phaser.Scene) {
     const cam = scene.cameras.main;
     const cx = cam.width / 2;
     const cy = cam.height / 2;
-    const PW = 360, PH = 350, DEPTH = 100;
+    const PW = 360, PH = 420, DEPTH = 100;
 
     this.overlay = scene.add.rectangle(cx, cy, cam.width, cam.height, 0x000000, 0.65)
       .setScrollFactor(0).setDepth(DEPTH).setVisible(false).setInteractive();
@@ -88,24 +87,26 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
       .setStrokeStyle(2, 0xffcc44, 1).setFillStyle(0, 0)
       .setScrollFactor(0).setDepth(DEPTH + 2).setVisible(false);
 
-    this.titleText = scene.add.text(cx, cy - 100, "🏪 Market Dock", {
+    this.titleText = scene.add.text(cx, cy - PH / 2 + 30, "🏪 Market Dock", {
       fontSize: "22px", fontStyle: "bold", color: "#ffdd88",
       fontFamily: "monospace", stroke: "#000", strokeThickness: 4,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 3).setVisible(false);
 
-    this.subtitleText = scene.add.text(cx, cy - 60, "", {
+    this.subtitleText = scene.add.text(cx, cy - PH / 2 + 66, "", {
       fontSize: "13px", color: "#a0e8ff",
       fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 3).setVisible(false);
 
-    this.divider = scene.add.rectangle(cx, cy - 36, PW - 40, 1, 0xffcc44, 0.4)
+    this.divider = scene.add.rectangle(cx, cy - PH / 2 + 90, PW - 40, 1, 0xffcc44, 0.4)
       .setScrollFactor(0).setDepth(DEPTH + 3).setVisible(false);
 
-    const spacing = 50;
-    this.btnSell      = this.makeButton(scene, cx, cy - spacing + 40, "💰  Sell Fish",         "#44ff88", DEPTH + 3);
-    this.btnUpgrade   = this.makeButton(scene, cx, cy + 40,           "⚙  Buy Upgrades",       "#66ccff", DEPTH + 3);
-    this.btnEndSeason = this.makeButton(scene, cx, cy + spacing + 40, "🌿  End Season & Sell", "#ffaa44", DEPTH + 3);
-    this.btnCancel    = this.makeButton(scene, cx, cy + spacing * 2 + 40, "✖  Cancel",          "#ff6666", DEPTH + 3);
+    const spacing = 55;
+    const startY  = cy - 80;
+    this.btnSell      = this.makeButton(scene, cx, startY,                  "💰  Sell Fish",         "#44ff88", DEPTH + 3);
+    this.btnFuel      = this.makeButton(scene, cx, startY + spacing,        `⛽  Buy Fuel  ($${FUEL_COST})`, "#ffcc44", DEPTH + 3);
+    this.btnUpgrade   = this.makeButton(scene, cx, startY + spacing * 2,    "⚙  Buy Upgrades",       "#66ccff", DEPTH + 3);
+    this.btnEndSeason = this.makeButton(scene, cx, startY + spacing * 3,    "🌿  End Season & Sell", "#ffaa44", DEPTH + 3);
+    this.btnCancel    = this.makeButton(scene, cx, startY + spacing * 4,    "✖  Cancel",             "#ff6666", DEPTH + 3);
   }
 
   private buildUpgradePanel(scene: Phaser.Scene) {
@@ -156,6 +157,7 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     );
 
     this.btnSell.removeAllListeners("pointerdown");
+    this.btnFuel.removeAllListeners("pointerdown");
     this.btnEndSeason.removeAllListeners("pointerdown");
     this.btnCancel.removeAllListeners("pointerdown");
     this.btnUpgrade.removeAllListeners("pointerdown");
@@ -165,17 +167,31 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     this.btnCancel.on("pointerdown",    () => { this.hideMenu(); this.onChoice?.("cancel",     inventory); });
     this.btnUpgrade.on("pointerdown",   () => { this.showUpgradePanel(inventory); });
 
+    // ── Fuel button ──────────────────────────────────────────────────────────
+    this.btnFuel.on("pointerdown", () => {
+      if (!this.fuelSystem || !this.economy) return;
+      const ok = this.fuelSystem.refuel(this.economy);
+      if (ok) {
+        this.btnFuel.setColor("#44ff88");
+        this.scene.time.delayedCall(600, () => this.btnFuel.setColor("#ffcc44"));
+      } else {
+        // Flash red — either full or can't afford
+        this.btnFuel.setColor("#ff4444");
+        this.scene.time.delayedCall(400, () => this.btnFuel.setColor("#ffcc44"));
+      }
+    });
+
     const all = [this.overlay, this.panel, this.panelBorder, this.titleText,
-                 this.subtitleText, this.divider, this.btnSell, this.btnUpgrade,
-                 this.btnEndSeason, this.btnCancel];
+                 this.subtitleText, this.divider, this.btnSell, this.btnFuel,
+                 this.btnUpgrade, this.btnEndSeason, this.btnCancel];
     all.forEach(el => el.setVisible(true).setAlpha(0));
     this.scene.tweens.add({ targets: all, alpha: 1, duration: 200, ease: "Cubic.easeOut" });
   }
 
   private showUpgradePanel(inventory: FishCatch[]) {
     const mainAll = [this.overlay, this.panel, this.panelBorder, this.titleText,
-                     this.subtitleText, this.divider, this.btnSell, this.btnUpgrade,
-                     this.btnEndSeason, this.btnCancel];
+                     this.subtitleText, this.divider, this.btnSell, this.btnFuel,
+                     this.btnUpgrade, this.btnEndSeason, this.btnCancel];
     mainAll.forEach(el => el.setVisible(false));
 
     this.upgradeItems.forEach(t => t.destroy());
@@ -227,8 +243,8 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     this.upgradeBackBtn.on("pointerdown", () => {
       this.hideUpgradePanel();
       const all = [this.overlay, this.panel, this.panelBorder, this.titleText,
-                   this.subtitleText, this.divider, this.btnSell, this.btnUpgrade,
-                   this.btnEndSeason, this.btnCancel];
+                   this.subtitleText, this.divider, this.btnSell, this.btnFuel,
+                   this.btnUpgrade, this.btnEndSeason, this.btnCancel];
       all.forEach(el => el.setVisible(true).setAlpha(1));
     });
 
@@ -249,13 +265,10 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
   hideMenu() {
     if (!this._menuOpen) return;
     this._menuOpen = false;
-
     this.hideUpgradePanel();
-
     const all = [this.overlay, this.panel, this.panelBorder, this.titleText,
-                 this.subtitleText, this.divider, this.btnSell, this.btnUpgrade,
-                 this.btnEndSeason, this.btnCancel];
-
+                 this.subtitleText, this.divider, this.btnSell, this.btnFuel,
+                 this.btnUpgrade, this.btnEndSeason, this.btnCancel];
     this.scene.tweens.add({
       targets: all, alpha: 0, duration: 150,
       onComplete: () => all.forEach(el => el.setVisible(false)),
@@ -276,6 +289,7 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     this.subtitleText?.destroy();
     this.divider?.destroy();
     this.btnSell?.destroy();
+    this.btnFuel?.destroy();
     this.btnUpgrade?.destroy();
     this.btnEndSeason?.destroy();
     this.btnCancel?.destroy();
