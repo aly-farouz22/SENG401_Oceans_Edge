@@ -48,6 +48,16 @@ export default class BoatUpgrade {
                     boat._m.fishing.ecoFilterLevel = boat._m.upgrades.returnLevel("Eco Filter");
                 }
             },
+            {
+                name: "Larger Hold",
+                description: "Expand inventory capacity by 5 slots",
+                cost: 20,
+                level: 0,
+                levelMax: 4,
+                effect: (boat) => {
+                    // Capacity is read dynamically via returnLevel so no action needed here
+                }
+            },
         ];
     }
 
@@ -56,11 +66,10 @@ export default class BoatUpgrade {
         if (!upgrade) return false;
         if (upgrade.level >= upgrade.levelMax) return false;
 
-        // Deduct via EconomySystem if available, else fallback
         const economy = this.boat._m?.economy;
         if (economy) {
             if (!economy.canAfford(upgrade.cost)) return false;
-            economy.addRevenue(-upgrade.cost); // deduct by adding negative
+            economy.addRevenue(-upgrade.cost);
         } else {
             if (this.boat.money < upgrade.cost) return false;
             this.boat.inventory._money -= upgrade.cost;
@@ -75,6 +84,11 @@ export default class BoatUpgrade {
     returnLevel(name: string) {
         const upgrade = this.upgrades.find(u => u.name === name);
         return upgrade ? upgrade.level : 0;
+    }
+
+    // Base capacity 10, +5 per Larger Hold level, max 30
+    getInventoryCapacity(): number {
+        return 10 + this.returnLevel("Larger Hold") * 5;
     }
 
     displayUpgrades() {

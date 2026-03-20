@@ -228,11 +228,66 @@ export default class BadgeGalleryScreen {
       ).setAlpha(def.unlocked && isMatch ? 0.6 : 0.15)
         .setScrollFactor(0).setDepth(DEPTH + 4);
 
+      // Make bg interactive for hover tooltip (works for both locked and unlocked)
+      bg.setInteractive();
+      bg.on("pointerover", () => this.showTooltip(def, x, y));
+      bg.on("pointerout",  () => this.hideTooltip());
+      // Highlight on hover
+      bg.on("pointerover", () => { bg.setFillStyle(def.unlocked ? 0x0f3a50 : 0x111f2d); this.showTooltip(def, x, y); });
+      bg.on("pointerout",  () => { bg.setFillStyle(bgColor); this.hideTooltip(); });
+
       [bg, bdr, icon, name, pip].forEach(o => {
         this.cellObjects.push(o);
         this.allObjects.push(o);
       });
     });
+  }
+
+  // ── Tooltip ──────────────────────────────────────────────────────────────────
+  private tooltipBg?:   Phaser.GameObjects.Rectangle;
+  private tooltipText?: Phaser.GameObjects.Text;
+
+  private showTooltip(def: AchievementDefinition & { unlocked: boolean }, x: number, y: number): void {
+    this.hideTooltip();
+
+    const cam    = this.scene.cameras.main;
+    const TW     = 180;
+    const TH     = 50;
+    const DEPTH  = 200; // above everything
+
+    // Flip above or below depending on space
+    const tipY = y - CELL_H / 2 - TH / 2 - 6;
+
+    // Clamp horizontally so it doesn't go off screen
+    const clampedX = Phaser.Math.Clamp(x, TW / 2 + 10, cam.width - TW / 2 - 10);
+
+    const label    = def.unlocked ? def.description : "???  Keep playing to unlock!";
+    const txtColor = def.unlocked ? "#aaccdd" : "#556677";
+
+    this.tooltipBg = this.scene.add.rectangle(clampedX, tipY, TW, TH, 0x000d1a, 0.95)
+      .setStrokeStyle(1, 0xffcc44, 0.6)
+      .setScrollFactor(0).setDepth(DEPTH);
+
+    this.tooltipText = this.scene.add.text(clampedX, tipY, label, {
+      fontSize: "10px", color: txtColor,
+      fontFamily: "monospace",
+      wordWrap: { width: TW - 16 },
+      align: "center",
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 1);
+
+    // Resize bg to fit text
+    const bounds = this.tooltipText.getBounds();
+    this.tooltipBg.setSize(TW, bounds.height + 16);
+
+    this.cellObjects.push(this.tooltipBg, this.tooltipText);
+    this.allObjects.push(this.tooltipBg, this.tooltipText);
+  }
+
+  private hideTooltip(): void {
+    this.tooltipBg?.destroy();
+    this.tooltipText?.destroy();
+    this.tooltipBg   = undefined;
+    this.tooltipText = undefined;
   }
 
   private dismiss(): void {

@@ -1,4 +1,6 @@
 import Phaser from "phaser";
+import { logChoice } from "../../../services/api";
+import { currentUsername } from "../../scenes/BootScene";
 import { EconomySystem } from "../../systems/EconomySystem";
 import { EcosystemSystem, FishSpecies } from "../../systems/EcosystemSystem";
 import FishingZone from "../FishingZone";
@@ -8,8 +10,6 @@ import BoatFishing from "./BoatFishing";
 import BoatInventory from "./BoatInventory";
 import BoatMovement from "./BoatMovement";
 import BoatUpgrade from "./BoatUpgrade";
-import { currentUsername } from "../../scenes/BootScene";
-import { logChoice } from "../../../services/api";
 
 interface BoatModules {
   movement:  BoatMovement;
@@ -63,6 +63,7 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
     const upgrades  = new BoatUpgrade(this);
 
     this._m = { movement, fishing, inventory, upgrades, economy: eco, ecosystem };
+    inventory.registerUpgrades(upgrades);
 
     fishing.onCatch = (fish) => {
       inventory.addFish(fish);
