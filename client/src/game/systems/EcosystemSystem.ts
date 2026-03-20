@@ -79,6 +79,8 @@ export class EcosystemSystem {
     this.applyOverfishingPenalties();
     this.updateBiodiversityIndex();
     this.resetSeasonalCatch();
+    this.addPollution(10);
+
   }
 
   private regenerateFish(): void {
@@ -201,7 +203,7 @@ public getLowPopulationSpecies(threshold: number): FishSpecies | undefined {
       fish.caughtThisSeason = 0;
     });
   }
-
+  
   public isGameOver(): boolean {
     const nativeSpeciesCollapsed = this.state.fishPopulations
       .filter((fish) => !fish.invasive)
@@ -210,7 +212,8 @@ public getLowPopulationSpecies(threshold: number): FishSpecies | undefined {
     return (
       this.state.biodiversityIndex <= 10 ||
       this.state.coralHealth <= 10 ||
-      nativeSpeciesCollapsed
+      nativeSpeciesCollapsed ||
+      this.state.pollutionLevel >= 100 
     );
   }
 }

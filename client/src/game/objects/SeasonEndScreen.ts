@@ -176,19 +176,30 @@ export default class SeasonEndScreen {
       });
     });
 
-    // Animate result + button
-    this.scene.time.delayedCall(afterRows + 500, () => {
-      this.scene.tweens.add({
-        targets: [resultText, continueBtn], alpha: 1, duration: 300, ease: "Cubic.easeOut",
-      });
-
-      continueBtn.on("pointerdown", () => {
-        this.dismiss();
-        this.onComplete?.(net >= 0);
-      });
-      continueBtn.on("pointerover",  () => continueBtn.setAlpha(0.75));
-      continueBtn.on("pointerout",   () => continueBtn.setAlpha(1));
+  this.scene.time.delayedCall(afterRows + 500, () => {
+    this.scene.tweens.add({
+      targets: [resultText, continueBtn],
+      alpha: 1,
+      duration: 300,
+      ease: "Cubic.easeOut",
     });
+
+    continueBtn.on("pointerdown", () => {
+      const scene = this.scene as any;
+  if (net < 0) {
+    scene.showGameOverScreen?.();
+    return; 
+  }
+
+  this.dismiss();
+  this.onComplete?.(true);
+
+      this.dismiss();
+    });
+
+    continueBtn.on("pointerover", () => continueBtn.setAlpha(0.75));
+    continueBtn.on("pointerout", () => continueBtn.setAlpha(1));
+  });
   }
 
   private dismiss() {
