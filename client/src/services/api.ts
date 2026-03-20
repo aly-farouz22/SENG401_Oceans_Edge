@@ -1,0 +1,77 @@
+// api.ts — all communication between the frontend and backend lives here.
+// These functions are the only place that knows about the backend URL.
+
+const API_URL = "http://localhost:5000/api/game";
+
+// Saves the current game state to the database
+export const saveGame = async (username: string, state: object): Promise<void> => {
+  try {
+    await fetch(`${API_URL}/save`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ username, state }),
+    });
+  } catch (err) {
+    console.error("Failed to save game:", err);
+  }
+};
+
+// Loads a previously saved game state from the database
+export const loadGame = async (username: string): Promise<object | null> => {
+  try {
+    const res  = await fetch(`${API_URL}/load/${username}`);
+    const data = await res.json();
+    return data ?? null;
+  } catch (err) {
+    console.error("Failed to load game:", err);
+    return null;
+  }
+};
+
+// Logs a player decision to the database.
+// decision examples: "caught_endangered", "cleaned_trash", "bought_upgrade", "species_extinct"
+// details is optional extra context e.g. { fishName: "Bluefin Tuna", season: 2 }
+export const logChoice = async (
+  username: string,
+  decision: string,
+  details?: object
+): Promise<void> => {
+  try {
+    await fetch(`${API_URL}/choice`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ username, decision, details }),
+    });
+  } catch (err) {
+    console.error("Failed to log choice:", err);
+  }
+};
+
+// Saves the final game outcome when a session ends.
+export const saveOutcome = async (
+  username:       string,
+  result:         string,
+  finalBalance:   number,
+  seasonsPlayed:  number,
+  coralHealth:    number,
+  pollutionLevel: number,
+  extinctSpecies: string[]
+): Promise<void> => {
+  try {
+    await fetch(`${API_URL}/outcome`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        username,
+        result,
+        finalBalance,
+        seasonsPlayed,
+        coralHealth,
+        pollutionLevel,
+        extinctSpecies,
+      }),
+    });
+  } catch (err) {
+    console.error("Failed to save outcome:", err);
+  }
+};

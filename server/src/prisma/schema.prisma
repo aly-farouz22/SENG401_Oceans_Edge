@@ -2,11 +2,60 @@ generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Stores one row per player — identified by a username they enter
 model Player {
-  id       String   @id @default(cuid())
-  name     String
-  money    Int      @default(0)
-  fish     Json     @default("[]") // Store fish as JSON for now
+  id        String   @id @default(cuid())
+  username  String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  gameState   GameState?
+  choices     Choice[]
+  outcomes    GameOutcome[]
+}
+
+// Stores the full game state for a player as a JSON blob.
+model GameState {
+  id        String   @id @default(cuid())
+  playerId  String   @unique
+  state     Json
+  updatedAt DateTime @updatedAt
+
+  player    Player   @relation(fields: [playerId], references: [id])
+}
+
+// Logs individual player decisions during gameplay.
+// Examples: catching an endangered fish, cleaning trash, buying an upgrade.
+// This directly reflects SDG 14 — we can track whether players are
+// making sustainable or destructive choices.
+model Choice {
+  id         String   @id @default(cuid())
+  playerId   String
+  decision   String   // e.g. "caught_endangered", "cleaned_trash", "bought_upgrade"
+  details    Json?    // optional extra info e.g. { fishName: "Bluefin Tuna", season: 2 }
+  createdAt  DateTime @default(now())
+
+  player     Player   @relation(fields: [playerId], references: [id])
+}
+
+// Stores the final result when a game session ends.
+// Records ecosystem health, final balance, and whether the player
+// caused a collapse or maintained a sustainable ocean.
+model GameOutcome {
+  id             String   @id @default(cuid())
+  playerId       String
+  result         String   // "win", "ecosystem_collapse", "bankrupt"
+  finalBalance   Int
+  seasonsPlayed  Int
+  coralHealth    Float
+  pollutionLevel Float
+  extinctSpecies String[] // list of species that went extinct
+  createdAt      DateTime @default(now())
+
+  player         Player   @relation(fields: [playerId], references: [id])
 }
