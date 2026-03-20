@@ -69,7 +69,8 @@ export default class BoatUpgrade {
         const economy = this.boat._m?.economy;
         if (economy) {
             if (!economy.canAfford(upgrade.cost)) return false;
-            economy.addRevenue(-upgrade.cost);
+            economy.getState().balance -= upgrade.cost;
+            economy.getState().totalExpenses += upgrade.cost;
         } else {
             if (this.boat.money < upgrade.cost) return false;
             this.boat.inventory._money -= upgrade.cost;

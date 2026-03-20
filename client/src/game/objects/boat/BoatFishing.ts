@@ -7,8 +7,8 @@ import TrashZone from "../TrashZone";
 const CAST_DURATION = 2000;
 
 const TRASH_CATCHES: FishCatch[] = [
-  { name: "Water Bottle",   rarity: "trash", points: 0, endangered: false, isJuvenile: false, amount: 1 },
-  { name: "Cigarette Buds", rarity: "trash", points: 0, endangered: false, isJuvenile: false, amount: 1 },
+  { name: "Water Bottle",   rarity: "trash", points: 0, endangered: false, invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Cigarette Buds", rarity: "trash", points: 0, endangered: false, invasive: false, isJuvenile: false, amount: 1 },
 ];
 
 export default class BoatFishing {
@@ -17,9 +17,9 @@ export default class BoatFishing {
   private spaceKey: Phaser.Input.Keyboard.Key;
   private popup:    CatchPopup;
 
-  private fishingZones: FishingZone[] = [];
-  private trashZones:   TrashZone[] = [];
-  private activeZone:   FishingZone | null = null;
+  private fishingZones:    FishingZone[] = [];
+  private trashZones:      TrashZone[] = [];
+  private activeZone:      FishingZone | null = null;
   private activeTrashZone: TrashZone | null = null;
 
   private _isFishing = false;
@@ -33,6 +33,9 @@ export default class BoatFishing {
   private bar:        Phaser.GameObjects.Rectangle;
 
   onCatch?: (fish: FishCatch) => void;
+
+  /** Wired up in Boat.ts — returns true when inventory is full */
+  isInventoryFull?: () => boolean;
 
   constructor(scene: Phaser.Scene, sprite: Phaser.Physics.Arcade.Sprite) {
     this.scene  = scene;
@@ -66,16 +69,27 @@ export default class BoatFishing {
     const isInTrashZone = activeTrashZone !== null;
     const isInAnyZone   = isInFishZone || isInTrashZone;
 
+    // Only block fishing when full — trash collecting is always allowed
+    const inventoryFull = !isInTrashZone && (this.isInventoryFull?.() ?? false);
+
     this.promptText
       .setPosition(x, y - 28)
-      .setText(isInTrashZone ? "SPACE to collect trash" : "SPACE to fish")
-      .setColor(isInTrashZone ? "#ffcc66" : "#a0e8ff")
+      .setText(
+        inventoryFull ? "🚫 Inventory Full"      :
+        isInTrashZone ? "SPACE to collect trash" :
+                        "SPACE to fish"
+      )
+      .setColor(
+        inventoryFull ? "#ff4444" :
+        isInTrashZone ? "#ffcc66" : "#a0e8ff"
+      )
       .setVisible(isInAnyZone && !this._isFishing && !isAtMarket);
 
     this.barBg.setPosition(x, y - 44);
     this.bar.setPosition(x - 30, y - 44);
 
     if (isInAnyZone && !this._isFishing && !isAtMarket &&
+        !inventoryFull &&
         Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
       this.activeZone      = activeZone;
       this.activeTrashZone = activeTrashZone;
@@ -111,17 +125,12 @@ export default class BoatFishing {
     if (this.activeTrashZone && !this.activeTrashZone.isGone) {
       fish = TRASH_CATCHES[Phaser.Math.Between(0, TRASH_CATCHES.length - 1)];
       this.activeTrashZone.collectTrash();
-
-      // ── Achievement: trash collected ──────────────────────────────────────
       AchievementManager.instance.updateStats({ trashZonesCleaned: 1 });
-      console.log("Stats after catch:", AchievementManager.instance.getStats());
-
 
     } else {
       fish = this.activeZone?.castLine() ?? null;
 
       if (fish) {
-        // ── Achievement: fish caught ────────────────────────────────────────
         const isRare = fish.rarity === "rare" || fish.rarity === "legendary";
         AchievementManager.instance.updateStats({
           totalFishCaught: 1,

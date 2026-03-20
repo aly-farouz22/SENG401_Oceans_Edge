@@ -64,6 +64,8 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
 
     this._m = { movement, fishing, inventory, upgrades, economy: eco, ecosystem };
     inventory.registerUpgrades(upgrades);
+    fishing.isInventoryFull = () => inventory.isFull;
+
 
     fishing.onCatch = (fish) => {
       inventory.addFish(fish);

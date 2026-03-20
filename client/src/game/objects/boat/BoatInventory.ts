@@ -27,6 +27,10 @@ export default class BoatInventory {
     return this.upgrades?.getInventoryCapacity() ?? 10;
   }
 
+  get isFull(): boolean {
+    return this.fish.length >= this.capacity;
+  }
+
   onSell?:      (earned: number, count: number) => void;
   onEndSeason?: (earned: number, count: number) => void;
   onUpgrade?:   () => void;
@@ -86,13 +90,12 @@ export default class BoatInventory {
   }
 
   addFish(fish: FishCatch): boolean {
-    if (this.fish.length >= this.capacity) {
-      this.showFullWarning();
-      return false;
-    }
-    this.fish.push(fish);
-    return true;
+  if (this.fish.length >= this.capacity) {
+    return false;
   }
+  this.fish.push(fish);
+  return true;
+}
 
   private showFullWarning() {
     if (this.fullWarning?.visible) return;
