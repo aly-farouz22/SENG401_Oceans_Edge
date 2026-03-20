@@ -10,6 +10,9 @@ export default class BoatMovement {
   public  speedMultiplier = 1;
 
   fuelSystem?: FuelSystem;
+  onFuelEmpty?: () => void;
+
+  private _fuelEmptyFired = false;
 
   constructor(scene: Phaser.Scene, sprite: Phaser.Physics.Arcade.Sprite) {
     this.sprite  = sprite;
@@ -23,7 +26,6 @@ export default class BoatMovement {
   }
 
   update(isFishing: boolean, delta = 16) {
-    console.log("delta:", delta, "fuel:", this.fuelSystem?.fuel); // ← add this
     if (isFishing) {
       this.sprite.setVelocity(0);
       return;
@@ -31,8 +33,15 @@ export default class BoatMovement {
 
     if (this.fuelSystem && !this.fuelSystem.canMove()) {
       this.sprite.setVelocity(0);
+      if (!this._fuelEmptyFired) {
+        this._fuelEmptyFired = true;
+        this.onFuelEmpty?.();
+      }
       return;
     }
+
+    // Reset flag once fuel is restored
+    this._fuelEmptyFired = false;
 
     let vx = 0, vy = 0;
 

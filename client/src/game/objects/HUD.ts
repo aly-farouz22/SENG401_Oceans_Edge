@@ -3,23 +3,23 @@ import { EcosystemState } from "../systems/EcosystemSystem";
 import { FuelSystem } from "../systems/FuelSystem";
 import { FishCatch } from "./FishingZone";
 
+const BAR_H = 64; // height of the UI bar sprite
+
 export default class HUD {
   private scene: Phaser.Scene;
+  private uiBar:         Phaser.GameObjects.Image;
   private moneyText:     Phaser.GameObjects.Text;
   private seasonText:    Phaser.GameObjects.Text;
   private inventoryText: Phaser.GameObjects.Text;
-  private sellFeedback:  Phaser.GameObjects.Text;
-  private panel:         Phaser.GameObjects.Rectangle;
   private ecosystemText: Phaser.GameObjects.Text;
-  private menuBtn:       Phaser.GameObjects.Text;
+  private sellFeedback:  Phaser.GameObjects.Text;
+  private menuBtn: Phaser.GameObjects.Image;
 
   // Fuel bar
   private fuelBarBg:   Phaser.GameObjects.Rectangle;
   private fuelBarFill: Phaser.GameObjects.Rectangle;
-  private fuelLabel:   Phaser.GameObjects.Text;
+  private fuelLabel:   Phaser.GameObjects.Image;
   private fuelSystem?: FuelSystem;
-
-  // Warning shown when out of fuel
   private fuelWarning: Phaser.GameObjects.Text;
 
   public onMenuOpen?: () => void;
@@ -27,52 +27,75 @@ export default class HUD {
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
 
-    const px = 12;
-    const py = 12;
+    const cam  = scene.cameras.main;
+    const W    = cam.width;
+    const H    = cam.height;
+    const barY = H - BAR_H / 2; // centre of bar at bottom
 
-    this.panel = scene.add
-      .rectangle(px + 90, py + 56, 500, 140, 0x001a2e, 0.75)
-      .setScrollFactor(0).setDepth(20);
+    // ── UI bar sprite ─────────────────────────────────────────────────────────
+    this.uiBar = scene.add.image(W / 2, barY, "ui_bar")
+      .setDisplaySize(W, BAR_H)
+      .setScrollFactor(0)
+      .setDepth(20);
 
-    this.moneyText = scene.add.text(px, py, "💰 $0", {
-      fontSize: "18px", color: "#ffdd44", fontStyle: "bold",
+    // Row Y positions inside the bar
+    const row1 = H - BAR_H + 10;  // top row
+    const row2 = H - BAR_H + 36;  // bottom row
+
+    // ── Money ─────────────────────────────────────────────────────────────────
+    this.moneyText = scene.add.text(12, row1, "💰 $0", {
+      fontSize: "15px", color: "#ffdd44", fontStyle: "bold",
       fontFamily: "monospace", stroke: "#000", strokeThickness: 3,
     }).setScrollFactor(0).setDepth(21);
 
-    this.inventoryText = scene.add.text(px, py + 30, "🐟 Inventory: empty", {
-      fontSize: "13px", color: "#a0e8ff",
+    // ── Season ────────────────────────────────────────────────────────────────
+    this.seasonText = scene.add.text(12, row2, "🌿 Season 1 — Spring", {
+      fontSize: "12px", color: "#aaffcc",
       fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
     }).setScrollFactor(0).setDepth(21);
 
-    this.seasonText = scene.add.text(px, py + 56, "🌿 Season 1 — Spring", {
-      fontSize: "13px", color: "#aaffcc",
+    // ── Inventory ─────────────────────────────────────────────────────────────
+    this.inventoryText = scene.add.text(W / 2, row1, "🐟 Inventory: empty", {
+      fontSize: "12px", color: "#a0e8ff",
       fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
-    }).setScrollFactor(0).setDepth(21);
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(21);
 
-    this.ecosystemText = scene.add.text(px, py + 80, "🌊 Ecosystem: Healthy", {
-      fontSize: "13px", color: "#a0ffaa",
+    // ── Ecosystem ─────────────────────────────────────────────────────────────
+    this.ecosystemText = scene.add.text(W / 2, row2, "🌊 Ecosystem: Healthy", {
+      fontSize: "11px", color: "#a0ffaa",
       fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
-    }).setScrollFactor(0).setDepth(21);
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(21);
 
-    // ── Fuel bar ─────────────────────────────────────────────────────────────
-    const fuelBarW = 120;
-    const fuelBarH = 8;
-    const fuelX    = px;
-    const fuelY    = py + 108;
+    // ── Fuel bar sprite (top-left) ───────────────────────────────────────────
+    // FuelBar.png is 98x34px: canister (~34px) + green bar (~64px)
+    const FUEL_SPRITE_W = 98 * 3;  // scale 2x for visibility
+    const FUEL_SPRITE_H = 34 * 3;
+    const fuelSpriteX   = FUEL_SPRITE_W / 2 + 8;
+    const fuelSpriteY   = FUEL_SPRITE_H / 2 + 8;
 
-    this.fuelLabel = scene.add.text(fuelX, fuelY - 2, "⛽", {
-      fontSize: "11px", fontFamily: "monospace",
-      stroke: "#000", strokeThickness: 2,
-    }).setScrollFactor(0).setDepth(21);
+    // Background sprite
+    this.fuelLabel = scene.add.image(fuelSpriteX, fuelSpriteY, "fuel_bar")
+      .setDisplaySize(FUEL_SPRITE_W, FUEL_SPRITE_H)
+      .setScrollFactor(0).setDepth(21) as any;
 
-    this.fuelBarBg = scene.add.rectangle(fuelX + 22 + fuelBarW / 2, fuelY + 3, fuelBarW, fuelBarH, 0x112233)
-      .setScrollFactor(0).setDepth(21);
+    // The green fill bar sits over the green portion of the sprite
+    // Green bar starts at ~34% from left, spans ~65% of width
+    const barStartX  = 8 + 34 * 3;          // left edge of green portion (scaled)
+    const fuelBarW   = 64 * 3;              // width of green portion (scaled)
+    const fuelBarH   = 14;                  // height of green bar
+    const barCenterY = fuelSpriteY + 2;     // vertically centred in sprite
 
-    this.fuelBarFill = scene.add.rectangle(fuelX + 22, fuelY + 3, fuelBarW, fuelBarH, 0xffcc44)
-      .setOrigin(0, 0.5).setScrollFactor(0).setDepth(22);
+    this.fuelBarBg = scene.add.rectangle(
+      barStartX + fuelBarW / 2, barCenterY, fuelBarW, fuelBarH, 0x1a0a00
+    ).setScrollFactor(0).setDepth(22);
 
+    this.fuelBarFill = scene.add.rectangle(
+      barStartX, barCenterY, fuelBarW, fuelBarH, 0x44dd44
+    ).setOrigin(0, 0.5).setScrollFactor(0).setDepth(23);
+
+    // ── Fuel empty warning ────────────────────────────────────────────────────
     this.fuelWarning = scene.add.text(
-      scene.cameras.main.width / 2, scene.cameras.main.height / 2 - 100,
+      W / 2, H / 2 - 100,
       "⛽ Out of fuel! Sail to the dock to refuel.", {
         fontSize: "16px", fontStyle: "bold", fontFamily: "monospace",
         color: "#ffcc44", stroke: "#000", strokeThickness: 4,
@@ -80,25 +103,20 @@ export default class HUD {
       }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(30).setVisible(false);
 
-    this.sellFeedback = scene.add.text(
-      scene.cameras.main.width / 2,
-      scene.cameras.main.height / 2 - 60, "", {
-        fontSize: "22px", fontStyle: "bold", fontFamily: "monospace",
-        color: "#ffdd44", stroke: "#000", strokeThickness: 5,
-      }
-    ).setOrigin(0.5).setScrollFactor(0).setDepth(30).setVisible(false);
+    // ── Sell feedback ─────────────────────────────────────────────────────────
+    this.sellFeedback = scene.add.text(W / 2, H / 2 - 60, "", {
+      fontSize: "22px", fontStyle: "bold", fontFamily: "monospace",
+      color: "#ffdd44", stroke: "#000", strokeThickness: 5,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(30).setVisible(false);
 
-    // Menu button
-    const cam = scene.cameras.main;
-    this.menuBtn = scene.add.text(cam.width - 12, py, "☰ Menu", {
-      fontSize: "15px", color: "#ffffff",
-      fontFamily: "monospace", stroke: "#000", strokeThickness: 3,
-      backgroundColor: "#0a2a3a", padding: { x: 12, y: 6 },
-    }).setOrigin(1, 0).setScrollFactor(0).setDepth(21)
+    // ── Menu button ───────────────────────────────────────────────────────────
+    this.menuBtn = scene.add.image(W - 40, 40, "pause_btn")
+      .setDisplaySize(56, 56)
+      .setScrollFactor(0).setDepth(21)
       .setInteractive({ useHandCursor: true })
-      .on("pointerover",  function(this: Phaser.GameObjects.Text) { this.setAlpha(0.75); })
-      .on("pointerout",   function(this: Phaser.GameObjects.Text) { this.setAlpha(1); })
-      .on("pointerdown",  () => this.onMenuOpen?.());
+      .on("pointerover",  function(this: Phaser.GameObjects.Image) { this.setAlpha(0.75); })
+      .on("pointerout",   function(this: Phaser.GameObjects.Image) { this.setAlpha(1); })
+      .on("pointerdown",  () => this.onMenuOpen?.()) as any;
 
     scene.input.keyboard!.on("keydown-ESC", () => this.onMenuOpen?.());
   }
@@ -133,16 +151,15 @@ export default class HUD {
       );
     }
 
-    // ── Fuel bar update ───────────────────────────────────────────────────────
+    // ── Fuel bar ──────────────────────────────────────────────────────────────
     if (this.fuelSystem) {
-      const ratio   = this.fuelSystem.ratio;
-      const barW    = 120;
-      const color   = ratio > 0.5 ? 0xffcc44 : ratio > 0.25 ? 0xff8844 : 0xff4444;
+      const ratio = this.fuelSystem.ratio;
+      const barW  = 64 * 3; // matches sprite green portion at 2x scale
+      const color = ratio > 0.5 ? 0x44dd44 : ratio > 0.25 ? 0xff8844 : 0xff4444;
 
-      this.fuelBarFill.setDisplaySize(Math.max(barW * ratio, 0), 8);
+      this.fuelBarFill.setDisplaySize(Math.max(barW * ratio, 0), 14);
       this.fuelBarFill.setFillStyle(color);
 
-      // Show "out of fuel" warning when empty
       const isEmpty = this.fuelSystem.isEmpty;
       if (isEmpty && !this.fuelWarning.visible) {
         this.fuelWarning.setVisible(true).setAlpha(1);
@@ -153,7 +170,7 @@ export default class HUD {
   }
 
   showSeasonBanner(season: number, seasonName: string) {
-    const cam = this.scene.cameras.main;
+    const cam    = this.scene.cameras.main;
     const banner = this.scene.add.text(cam.width / 2, cam.height / 2, `🌿 Season ${season} — ${seasonName}`, {
       fontSize: "28px", fontStyle: "bold", fontFamily: "monospace",
       color: "#aaffcc", stroke: "#000", strokeThickness: 6,
@@ -188,7 +205,7 @@ export default class HUD {
   }
 
   displayWarning(message: string) {
-    const cam = this.scene.cameras.main;
+    const cam     = this.scene.cameras.main;
     const warning = this.scene.add.text(cam.width / 2, cam.height / 2 - 100, message, {
       fontSize: "20px", fontStyle: "bold", fontFamily: "monospace",
       color: "#ff4444", stroke: "#000", strokeThickness: 4,

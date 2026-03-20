@@ -52,6 +52,9 @@ export default class MainScene extends Phaser.Scene {
     this.load.image("ocean_bg",       "/assets/Ocean_bg.png");
     this.load.image("market_dock",    "/assets/Harbour.png");
     this.load.image("fishing_zone",   "/assets/FishingZone.png");
+    this.load.image("ui_bar", "/assets/UI.png");
+    this.load.image("fuel_bar", "/assets/FuelBar.png");
+    this.load.image("pause_btn", "/assets/Pause.png");
   }
 
   create() {
@@ -94,9 +97,9 @@ export default class MainScene extends Phaser.Scene {
       this.marketZones.forEach(z => z.registerUpgrades(this.boat.upgrades));
       this.marketZones.forEach(z => z.registerFuel(this.boat.fuelSystem, this.economy));
 
-
       this.hud = new HUD(this);
       this.hud.registerFuel(this.boat.fuelSystem);
+
       this.pauseMenu = new PauseMenu(this);
 
       this.hud.onMenuOpen = () => this.pauseMenu.open();
@@ -108,17 +111,32 @@ export default class MainScene extends Phaser.Scene {
         balance: this.economy.getState().balance,
       });
 
+      // ── Towing fee when fuel runs out ──────────────────────────────────────
+      this.boat.boatMovement.onFuelEmpty = () => {
+        const TOWING_FEE = 300;
+        this.economy.getState().balance       -= TOWING_FEE;
+        this.economy.getState().totalExpenses += TOWING_FEE;
+
+        // Teleport to just below the dock
+        const dock = this.marketZones[0];
+        this.boat.setPosition(dock.x, dock.y + 100);
+
+        this.showEvent(
+          "🚤 Towed to Dock",
+          `You ran out of fuel and were towed back for $${TOWING_FEE}!`
+        );
+      };
+
       this.eventSystem.onSpawnTrash = (x, y) => { this.spawnTrashZone(x, y); };
 
       this.boat.onSell = (earned, count) => {
         AchievementManager.instance.updateStats({ lifetimeEarnings: earned });
         this.hud.showSellFeedback(earned, count);
 
-        // Save game state after every sell so progress is never lost
         if (currentUsername) {
           saveGame(currentUsername, {
-            money:  this.economy.getBalance(),
-            season: this.seasonManager.season,
+            money:          this.economy.getBalance(),
+            season:         this.seasonManager.season,
             coralHealth:    this.ecosystem.getState().coralHealth,
             pollutionLevel: this.ecosystem.getState().pollutionLevel,
           });
@@ -148,7 +166,6 @@ export default class MainScene extends Phaser.Scene {
             this.hasGameEnded = true;
             this.showEvent("💀 Game Over", "You couldn't cover your seasonal costs!");
 
-            // Save outcome — player went bankrupt
             if (currentUsername) {
               const ecoState = this.ecosystem.getState();
               const extinct  = ecoState.fishPopulations
@@ -156,8 +173,7 @@ export default class MainScene extends Phaser.Scene {
                 .map(f => f.name as string);
 
               saveOutcome(
-                currentUsername,
-                "bankrupt",
+                currentUsername, "bankrupt",
                 Math.floor(econState.balance),
                 this.seasonManager.season,
                 ecoState.coralHealth,
@@ -179,7 +195,6 @@ export default class MainScene extends Phaser.Scene {
           this.hud.showSellFeedback(earned, count);
           this.economy.updateSeason();
 
-          // Save game state at the end of every season
           if (currentUsername) {
             saveGame(currentUsername, {
               money:          econState.balance,
@@ -188,7 +203,6 @@ export default class MainScene extends Phaser.Scene {
               pollutionLevel: this.ecosystem.getState().pollutionLevel,
             });
 
-            // Log season end as a choice for tracking progress
             logChoice(currentUsername, "season_completed", {
               season:  this.seasonManager.season,
               balance: econState.balance,
@@ -202,6 +216,9 @@ export default class MainScene extends Phaser.Scene {
           if (crisis) this.showEvent(crisis.title, crisis.description);
 
           this.seasonManager.advanceSeason();
+
+          // Refuel free at the start of each new season
+          this.boat.fuelSystem.refuelFree();
         };
       };
 
@@ -225,7 +242,6 @@ export default class MainScene extends Phaser.Scene {
       this.showEvent("Trash Cleaned! 🌊", "Pollution reduced and fish populations boosted.");
       this.trashZones = this.trashZones.filter(z => z !== zone);
 
-      // Log trash cleaning as a positive choice
       if (currentUsername) {
         logChoice(currentUsername, "cleaned_trash", {
           season: this.seasonManager.season,
@@ -268,7 +284,6 @@ export default class MainScene extends Phaser.Scene {
       this.hasGameEnded = true;
       this.scene.pause();
 
-      // Save outcome — ecosystem collapsed
       if (currentUsername) {
         const ecoState = this.ecosystem.getState();
         const extinct  = ecoState.fishPopulations
@@ -276,8 +291,7 @@ export default class MainScene extends Phaser.Scene {
           .map(f => f.name as string);
 
         saveOutcome(
-          currentUsername,
-          "ecosystem_collapse",
+          currentUsername, "ecosystem_collapse",
           Math.floor(this.economy.getBalance()),
           this.seasonManager.season,
           ecoState.coralHealth,
