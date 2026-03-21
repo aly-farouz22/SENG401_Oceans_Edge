@@ -100,7 +100,7 @@ export default class MainScene extends Phaser.Scene {
         new MarketZone(this, 880, 120, 120, 80, "Market Dock"),
       ];
 
-      AchievementManager.instance.updateStats({ totalTrashZones: 3 });
+      AchievementManager.instance.updateStats({ totalTrashZones: 0 });
 
       this.seasonManager = new SeasonManager(this, this.ecosystem);
       this.seasonManager.registerZones(this.fishingZones);
@@ -113,6 +113,11 @@ export default class MainScene extends Phaser.Scene {
 
       this.hud = new HUD(this);
       this.hud.registerFuel(this.boat.fuelSystem);
+      this.hud.onEndangeredLimit = () => {
+        this.hasGameEnded = true;
+        this.showEvent("💀 Game Over", "You caught too many endangered species!");
+        this.scene.pause();
+      };
 
       this.pauseMenu = new PauseMenu(this);
       this.hud.onMenuOpen = () => this.pauseMenu.open();
@@ -135,23 +140,20 @@ export default class MainScene extends Phaser.Scene {
           `You ran out of fuel and were towed back for $${TOWING_FEE}!`);
       };
 
-      // ── Objective: endangered catch ───────────────────────────────────────
-      this.boat.onEndangeredCatch = () => {
-        this.objectives.updateStats({ endangeredCaught: 1 });
-      };
-
       // ── Collection tracking ───────────────────────────────────────────────
       // Register each non-trash catch with the HUD collection
       const origOnCatch = this.boat.fishing.onCatch;
       this.boat.fishing.onCatch = (fish) => {
         origOnCatch?.(fish);
         if (fish.rarity !== "trash") {
-          // Map fish name to registry id (lowercase, underscored)
           const id = fish.name.toLowerCase().replace(/\s+/g, "_");
           this.hud.registerCatch(id);
         }
+        if (fish.endangered) {
+          this.objectives.updateStats({ endangeredCaught: 1 });
+          this.hud.registerEndangeredCatch();
+        }
       };
-
       this.eventSystem.onSpawnTrash = (x, y) => { this.spawnTrashZone(x, y); };
 
       this.boat.onSell = (earned, count) => {
@@ -237,6 +239,17 @@ export default class MainScene extends Phaser.Scene {
           this.seasonManager.advanceSeason();
           this.boat.fuelSystem.refuelFree();
 
+          // ── Spawn extra trash zones each season ────────────────────────────
+          const extraTrash   = Math.min(Math.floor(this.seasonManager.season / 2), 3);
+          for (let t = 0; t < extraTrash; t++) {
+            const tx = Phaser.Math.Between(80, this.cameras.main.width  - 80);
+            const ty = Phaser.Math.Between(80, this.cameras.main.height - 150);
+            this.spawnTrashZone(tx, ty);
+          }
+          AchievementManager.instance.updateStats({
+            totalTrashZones: 3 + this.trashZones.length,
+          });
+
           // ── Start next season objectives + show popup ──────────────────
           const nextSeason = season + 1;
           this.objectives.startSeason(nextSeason);
@@ -250,10 +263,6 @@ export default class MainScene extends Phaser.Scene {
         this.hud.showSeasonBanner(season, seasonName);
       };
 
-      this.spawnTrashZone(250, 150);
-      this.spawnTrashZone(600, 400);
-      this.spawnTrashZone(750, 200);
-
       // ── Start season 1 objectives and show popup ──────────────────────
       this.objectives.startSeason(1);
       const introPopup = new SeasonObjectivePopup(this);
@@ -266,6 +275,16 @@ export default class MainScene extends Phaser.Scene {
   private spawnTrashZone(x: number, y: number) {
     const zone = new TrashZone(this, x, y, 100, 100, this.ecosystem);
     this.trashZones.push(zone);
+
+    // Give the zone access to fishing zones so it can seep into nearest one
+    zone.fishingZones = this.fishingZones;
+
+    zone.onSeepStart = () => {
+      this.showEvent(
+        "☠ Trash Seeping!",
+        "An uncleaned trash zone is now draining a nearby fishing area!"
+      );
+    };
 
     zone.onCleaned = () => {
       this.showEvent("Trash Cleaned! 🌊", "Pollution reduced and fish populations boosted.");

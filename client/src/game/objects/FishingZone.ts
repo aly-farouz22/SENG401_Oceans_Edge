@@ -12,16 +12,16 @@ export interface FishCatch {
 }
 
 const FISH_TABLE: FishCatch[] = [
-  { name: "Anchovy Sprat",   ecosystemName: "Salmon",   rarity: "common",    points: 15,  endangered: false, invasive: false, isJuvenile: false, amount: 1 },
-  { name: "Haddock",         ecosystemName: "Salmon",   rarity: "common",    points: 15,  endangered: false, invasive: false, isJuvenile: false, amount: 1 },
-  { name: "Opah",            ecosystemName: "Tuna",     rarity: "uncommon",  points: 25,  endangered: false, invasive: false, isJuvenile: false, amount: 1 },
-  { name: "Red Snapper",     ecosystemName: "Tuna",     rarity: "uncommon",  points: 30,  endangered: false, invasive: false, isJuvenile: false, amount: 1 },
-  { name: "Pacific Halibut", ecosystemName: "Salmon",   rarity: "rare",      points: 75,  endangered: false, invasive: false, isJuvenile: false, amount: 1 },
-  { name: "Swordfish",       ecosystemName: "Tuna",     rarity: "rare",      points: 100, endangered: false, invasive: false, isJuvenile: false, amount: 1 },
-  { name: "Aurora Trout",    ecosystemName: "Bluefin",  rarity: "legendary", points: 300, endangered: true,  invasive: false, isJuvenile: false, amount: 1 },
-  { name: "Bluefin Tuna",    ecosystemName: "Bluefin",  rarity: "legendary", points: 500, endangered: true,  invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Anchovy Sprat",   ecosystemName: "Anchovy",   rarity: "common",    points: 15,  endangered: false, invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Haddock",         ecosystemName: "Haddock",   rarity: "common",    points: 15,  endangered: false, invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Opah",            ecosystemName: "Opah",     rarity: "uncommon",  points: 25,  endangered: false, invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Red Snapper",     ecosystemName: "Snapper",     rarity: "uncommon",  points: 30,  endangered: false, invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Pacific Halibut", ecosystemName: "Halibut",   rarity: "rare",      points: 40,  endangered: false, invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Swordfish",       ecosystemName: "Swordfish",     rarity: "rare",      points: 40, endangered: false, invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Aurora Trout",    ecosystemName: "Trout",  rarity: "common", points: 30, endangered: true,  invasive: false, isJuvenile: false, amount: 1 },
+  { name: "Bluefin Tuna",    ecosystemName: "Tuna",  rarity: "legendary", points: 50, endangered: true,  invasive: false, isJuvenile: false, amount: 1 },
   { name: "Lionfish",        ecosystemName: "Lionfish", rarity: "uncommon",  points: 20,  endangered: false, invasive: true,  isJuvenile: false, amount: 1 },
-  { name: "Green Crab",      ecosystemName: "Lionfish", rarity: "common",    points: 8,   endangered: false, invasive: true,  isJuvenile: false, amount: 1 },
+  { name: "Green Crab",      ecosystemName: "Crab", rarity: "common",    points: 8,   endangered: false, invasive: true,  isJuvenile: false, amount: 1 },
 ];
 
 const TRASH_TABLE: FishCatch[] = [
@@ -45,7 +45,7 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
   private barFill:  Phaser.GameObjects.Rectangle;
   private emptyText: Phaser.GameObjects.Text;
 
-  private stock        = MAX_STOCK;
+  stock                = MAX_STOCK;   // package-accessible for TrashZone seep
   private regenRate    = 1.0;  // multiplier from ProgressionSystem (1.0 = normal)
   private barY:        number;
   private _destroyed   = false;
@@ -192,7 +192,7 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
     });
   }
 
-  private refreshBar() {
+  refreshBar() {
     const pct = this.stock / MAX_STOCK;
     this.barFill.setDisplaySize(BAR_WIDTH * pct, BAR_HEIGHT);
 

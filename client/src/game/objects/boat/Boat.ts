@@ -76,6 +76,11 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
     this.fuelSystem     = new FuelSystem();
     movement.fuelSystem = this.fuelSystem;
 
+    // ── Drain fuel per cast ────────────────────────────────────────────────
+    fishing.onCast = () => {
+      this.fuelSystem.drain(800); // ~2.7 fuel units per cast
+    };
+
     fishing.onCatch = (fish) => {
       inventory.addFish(fish);
 

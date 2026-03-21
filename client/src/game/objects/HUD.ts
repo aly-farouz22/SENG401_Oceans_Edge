@@ -4,7 +4,8 @@ import { FuelSystem } from "../systems/FuelSystem";
 import FishCollection from "./FishCollection";
 import { FishCatch } from "./FishingZone";
 
-const BAR_H = 64; // height of the UI bar sprite
+const BAR_H             = 64;
+const ENDANGERED_LIMIT  = 7;
 
 export default class HUD {
   private scene: Phaser.Scene;
@@ -23,11 +24,17 @@ export default class HUD {
   private fuelSystem?: FuelSystem;
   private fuelWarning: Phaser.GameObjects.Text;
 
+  // Collection
   private collectionBtn!: Phaser.GameObjects.Text;
   private caughtFishIds:  Set<string> = new Set();
   private openCollection?: FishCollection;
 
-  public onMenuOpen?: () => void;
+  // Endangered counter
+  private endangeredCount = 0;
+  private endangeredText:  Phaser.GameObjects.Text;
+
+  public onMenuOpen?:        () => void;
+  public onEndangeredLimit?: () => void;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -37,11 +44,10 @@ export default class HUD {
     const H    = cam.height;
     const barY = H - BAR_H / 2;
 
-    // ── UI bar sprite (bottom) ────────────────────────────────────────────────
+    // ── UI bar sprite ─────────────────────────────────────────────────────────
     this.uiBar = scene.add.image(W / 2, barY, "ui_bar")
       .setDisplaySize(W, BAR_H)
-      .setScrollFactor(0)
-      .setDepth(20);
+      .setScrollFactor(0).setDepth(20);
 
     const row1 = H - BAR_H + 10;
     const row2 = H - BAR_H + 36;
@@ -70,20 +76,24 @@ export default class HUD {
       fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(21);
 
+    // ── Endangered counter ────────────────────────────────────────────────────
+    this.endangeredText = scene.add.text(W - 200, row1,
+      `🐠 Endangered: 0/${ENDANGERED_LIMIT}`, {
+      fontSize: "12px", color: "#44ff88",
+      fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
+    }).setScrollFactor(0).setDepth(21);
+
     // ── Fuel bar sprite (top-left) ────────────────────────────────────────────
-    // FuelBar.png is 98×34px. Scale 4× for visibility.
-    const SCALE      = 4;
-    const SPRITE_W   = 98 * SCALE;
-    const SPRITE_H   = 34 * SCALE;
-    const spriteX    = SPRITE_W / 2 + 8;
-    const spriteY    = SPRITE_H / 2 + 8;
+    const SCALE    = 4;
+    const SPRITE_W = 98 * SCALE;
+    const SPRITE_H = 34 * SCALE;
+    const spriteX  = SPRITE_W / 2 + 8;
+    const spriteY  = SPRITE_H / 2 + 8;
 
     this.fuelSprite = scene.add.image(spriteX, spriteY, "fuel_bar")
       .setDisplaySize(SPRITE_W, SPRITE_H)
       .setScrollFactor(0).setDepth(21);
 
-    // Overlay the green fill on the bar portion of the sprite.
-    // Canister occupies left ~35% (34px of 98px), bar the remaining ~65% (64px).
     const barStartX  = 8 + 34 * SCALE;
     const fuelBarW   = 64 * SCALE;
     const fuelBarH   = 20;
@@ -122,7 +132,7 @@ export default class HUD {
       .on("pointerout",   function(this: Phaser.GameObjects.Image) { this.setAlpha(1); })
       .on("pointerdown",  () => this.onMenuOpen?.());
 
-    // ── Collection button ────────────────────────────────────────────────────
+    // ── Collection button ─────────────────────────────────────────────────────
     this.collectionBtn = scene.add.text(W - 100, 12, "📖", {
       fontSize: "22px", fontFamily: "monospace",
       stroke: "#000", strokeThickness: 2,
@@ -140,7 +150,61 @@ export default class HUD {
     scene.input.keyboard!.on("keydown-ESC", () => this.onMenuOpen?.());
   }
 
-  /** Call whenever a non-trash fish is caught to track collection progress. */
+  // ── Endangered tracking ───────────────────────────────────────────────────────
+
+  registerEndangeredCatch(): void {
+    if (this.endangeredCount >= ENDANGERED_LIMIT) return;
+
+    this.endangeredCount++;
+    const remaining = ENDANGERED_LIMIT - this.endangeredCount;
+    const color     = remaining <= 2 ? "#ff4444" : remaining <= 4 ? "#ffaa44" : "#44ff88";
+
+    this.endangeredText
+      .setText(`🐠 Endangered: ${this.endangeredCount}/${ENDANGERED_LIMIT}`)
+      .setColor(color);
+
+    // Flash warning popup
+    this.showEndangeredWarning(remaining);
+
+    // Fire game over callback at limit
+    if (this.endangeredCount >= ENDANGERED_LIMIT) {
+      this.scene.time.delayedCall(1200, () => this.onEndangeredLimit?.());
+    }
+  }
+
+  private showEndangeredWarning(remaining: number): void {
+    const cam = this.scene.cameras.main;
+    const msg = remaining === 0
+      ? "💀 Too many endangered fish caught!"
+      : remaining === 1
+        ? `⚠ WARNING: 1 more endangered catch = GAME OVER!`
+        : `⚠ Endangered fish caught! ${remaining} catches remaining.`;
+
+    const color = remaining <= 1 ? "#ff4444" : "#ffaa44";
+
+    const popup = this.scene.add.text(cam.width / 2, cam.height / 2 - 80, msg, {
+      fontSize: "16px", fontStyle: "bold", fontFamily: "monospace",
+      color, stroke: "#000", strokeThickness: 4,
+      backgroundColor: "#1a0000", padding: { x: 16, y: 10 },
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(50).setAlpha(0);
+
+    this.scene.tweens.add({
+      targets: popup,
+      alpha: 1, duration: 250, ease: "Cubic.easeOut",
+      yoyo: true, hold: 2000,
+      onComplete: () => popup.destroy(),
+    });
+
+    // Pulse the counter text red
+    this.scene.tweens.add({
+      targets: this.endangeredText,
+      scaleX: 1.2, scaleY: 1.2,
+      duration: 150, yoyo: true, repeat: 2, ease: "Cubic.easeOut",
+    });
+  }
+
+  // ── Collection ────────────────────────────────────────────────────────────────
+
   registerCatch(fishId: string): void {
     this.caughtFishIds.add(fishId);
   }
@@ -148,6 +212,8 @@ export default class HUD {
   registerFuel(fuelSystem: FuelSystem) {
     this.fuelSystem = fuelSystem;
   }
+
+  // ── Update ────────────────────────────────────────────────────────────────────
 
   update(
     money: number,
@@ -175,7 +241,7 @@ export default class HUD {
       );
     }
 
-    // ── Fuel bar update ───────────────────────────────────────────────────────
+    // ── Fuel bar ──────────────────────────────────────────────────────────────
     if (this.fuelSystem) {
       const ratio = this.fuelSystem.ratio;
       const barW  = 64 * 4;

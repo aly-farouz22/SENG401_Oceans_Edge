@@ -22,7 +22,7 @@ const RARITY_LABELS: Record<string, string> = {
 };
 
 const FISH_IMAGE_MAP: Record<string, string> = {
-  "Anchovy Sprat":        "fish_anchovy",
+  "Anchovy Sprat":  "fish_anchovy",
   "Haddock":        "fish_haddock",
   "Opah":           "fish_opah",
   "Pacific Halibut":"fish_halibut",
@@ -58,7 +58,9 @@ export default class CatchPopup {
     const PW = 560;
     const PH = 700;
 
-    const isTrash = fish.rarity === "trash";
+    const isTrash      = fish.rarity === "trash";
+    const isEndangered = fish.endangered;
+    const isInvasive   = fish.invasive;
 
     const rarityColor = Phaser.Display.Color.HexStringToColor(
       RARITY_COLORS[fish.rarity] ?? "#ffffff"
@@ -111,6 +113,24 @@ export default class CatchPopup {
       fontFamily: "monospace", stroke: "#000", strokeThickness: 3,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
 
+    // ── Species warning tag ───────────────────────────────────────────────────
+    let warningText: Phaser.GameObjects.Text | null = null;
+    if (isEndangered) {
+      warningText = this.scene.add.text(cx, cy + 264,
+        "⚠  ENDANGERED  —  counted toward your catch limit!", {
+        fontSize: "13px", fontStyle: "bold", color: "#ff4444",
+        fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
+        backgroundColor: "#2a0000", padding: { x: 12, y: 6 },
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
+    } else if (isInvasive) {
+      warningText = this.scene.add.text(cx, cy + 264,
+        "☠  INVASIVE SPECIES  —  removing them helps the ocean!", {
+        fontSize: "13px", fontStyle: "bold", color: "#cc44ff",
+        fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
+        backgroundColor: "#1a0028", padding: { x: 12, y: 6 },
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
+    }
+
     const pointsText = this.scene.add.text(
       cx, cy + PH / 2 - 52,
       isTrash ? "No reward 🚯" : `+ $${fish.points}`,
@@ -125,12 +145,15 @@ export default class CatchPopup {
       fontSize: "12px", color: "#445566", fontFamily: "monospace",
     }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
 
-    const all = [overlay, panel, border, accentLine, header, img,
-                 nameText, rarityText, pointsText, hint];
+    const all: Phaser.GameObjects.GameObject[] = [
+      overlay, panel, border, accentLine, header, img,
+      nameText, rarityText, pointsText, hint,
+    ];
+    if (warningText) all.push(warningText);
 
     this.container = this.scene.add.container(0, 0, all).setDepth(200);
 
-    all.forEach(o => o.setAlpha(0));
+    all.forEach(o => (o as any).setAlpha(0));
     this.scene.tweens.add({
       targets: all, alpha: 1, duration: 220, ease: "Cubic.easeOut",
     });

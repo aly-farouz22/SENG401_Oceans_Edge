@@ -33,6 +33,7 @@ export default class BoatFishing {
   private bar:        Phaser.GameObjects.Rectangle;
 
   onCatch?: (fish: FishCatch) => void;
+  onCast?:  () => void;  // ← fires when a cast starts, used to drain fuel
 
   /** Wired up in Boat.ts — returns true when inventory is full */
   isInventoryFull?: () => boolean;
@@ -69,7 +70,6 @@ export default class BoatFishing {
     const isInTrashZone = activeTrashZone !== null;
     const isInAnyZone   = isInFishZone || isInTrashZone;
 
-    // Only block fishing when full — trash collecting is always allowed
     const inventoryFull = !isInTrashZone && (this.isInventoryFull?.() ?? false);
 
     this.promptText
@@ -102,6 +102,9 @@ export default class BoatFishing {
     this.sprite.setVelocity(0);
     this.promptText.setVisible(false);
     this.barBg.setVisible(true);
+
+    // ── Drain fuel per cast ───────────────────────────────────────────────
+    this.onCast?.();
 
     this.bar
       .setFillStyle(isTrash ? 0x886633 : 0x00aaff)
