@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { EcosystemState } from "../systems/EcosystemSystem";
 import { FuelSystem } from "../systems/FuelSystem";
+import FishCollection from "./FishCollection";
 import { FishCatch } from "./FishingZone";
 
 const BAR_H = 64; // height of the UI bar sprite
@@ -13,14 +14,18 @@ export default class HUD {
   private inventoryText: Phaser.GameObjects.Text;
   private ecosystemText: Phaser.GameObjects.Text;
   private sellFeedback:  Phaser.GameObjects.Text;
-  private menuBtn: Phaser.GameObjects.Image;
+  private menuBtn:       Phaser.GameObjects.Image;
 
   // Fuel bar
   private fuelBarBg:   Phaser.GameObjects.Rectangle;
   private fuelBarFill: Phaser.GameObjects.Rectangle;
-  private fuelLabel:   Phaser.GameObjects.Image;
+  private fuelSprite:  Phaser.GameObjects.Image;
   private fuelSystem?: FuelSystem;
   private fuelWarning: Phaser.GameObjects.Text;
+
+  private collectionBtn!: Phaser.GameObjects.Text;
+  private caughtFishIds:  Set<string> = new Set();
+  private openCollection?: FishCollection;
 
   public onMenuOpen?: () => void;
 
@@ -30,17 +35,16 @@ export default class HUD {
     const cam  = scene.cameras.main;
     const W    = cam.width;
     const H    = cam.height;
-    const barY = H - BAR_H / 2; // centre of bar at bottom
+    const barY = H - BAR_H / 2;
 
-    // ── UI bar sprite ─────────────────────────────────────────────────────────
+    // ── UI bar sprite (bottom) ────────────────────────────────────────────────
     this.uiBar = scene.add.image(W / 2, barY, "ui_bar")
       .setDisplaySize(W, BAR_H)
       .setScrollFactor(0)
       .setDepth(20);
 
-    // Row Y positions inside the bar
-    const row1 = H - BAR_H + 10;  // top row
-    const row2 = H - BAR_H + 36;  // bottom row
+    const row1 = H - BAR_H + 10;
+    const row2 = H - BAR_H + 36;
 
     // ── Money ─────────────────────────────────────────────────────────────────
     this.moneyText = scene.add.text(12, row1, "💰 $0", {
@@ -66,24 +70,24 @@ export default class HUD {
       fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(21);
 
-    // ── Fuel bar sprite (top-left) ───────────────────────────────────────────
-    // FuelBar.png is 98x34px: canister (~34px) + green bar (~64px)
-    const FUEL_SPRITE_W = 98 * 3;  // scale 2x for visibility
-    const FUEL_SPRITE_H = 34 * 3;
-    const fuelSpriteX   = FUEL_SPRITE_W / 2 + 8;
-    const fuelSpriteY   = FUEL_SPRITE_H / 2 + 8;
+    // ── Fuel bar sprite (top-left) ────────────────────────────────────────────
+    // FuelBar.png is 98×34px. Scale 4× for visibility.
+    const SCALE      = 4;
+    const SPRITE_W   = 98 * SCALE;
+    const SPRITE_H   = 34 * SCALE;
+    const spriteX    = SPRITE_W / 2 + 8;
+    const spriteY    = SPRITE_H / 2 + 8;
 
-    // Background sprite
-    this.fuelLabel = scene.add.image(fuelSpriteX, fuelSpriteY, "fuel_bar")
-      .setDisplaySize(FUEL_SPRITE_W, FUEL_SPRITE_H)
-      .setScrollFactor(0).setDepth(21) as any;
+    this.fuelSprite = scene.add.image(spriteX, spriteY, "fuel_bar")
+      .setDisplaySize(SPRITE_W, SPRITE_H)
+      .setScrollFactor(0).setDepth(21);
 
-    // The green fill bar sits over the green portion of the sprite
-    // Green bar starts at ~34% from left, spans ~65% of width
-    const barStartX  = 8 + 34 * 3;          // left edge of green portion (scaled)
-    const fuelBarW   = 64 * 3;              // width of green portion (scaled)
-    const fuelBarH   = 14;                  // height of green bar
-    const barCenterY = fuelSpriteY + 2;     // vertically centred in sprite
+    // Overlay the green fill on the bar portion of the sprite.
+    // Canister occupies left ~35% (34px of 98px), bar the remaining ~65% (64px).
+    const barStartX  = 8 + 34 * SCALE;
+    const fuelBarW   = 64 * SCALE;
+    const fuelBarH   = 20;
+    const barCenterY = spriteY + 2;
 
     this.fuelBarBg = scene.add.rectangle(
       barStartX + fuelBarW / 2, barCenterY, fuelBarW, fuelBarH, 0x1a0a00
@@ -109,16 +113,36 @@ export default class HUD {
       color: "#ffdd44", stroke: "#000", strokeThickness: 5,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(30).setVisible(false);
 
-    // ── Menu button ───────────────────────────────────────────────────────────
+    // ── Pause button (top-right) ──────────────────────────────────────────────
     this.menuBtn = scene.add.image(W - 40, 40, "pause_btn")
       .setDisplaySize(56, 56)
       .setScrollFactor(0).setDepth(21)
       .setInteractive({ useHandCursor: true })
       .on("pointerover",  function(this: Phaser.GameObjects.Image) { this.setAlpha(0.75); })
       .on("pointerout",   function(this: Phaser.GameObjects.Image) { this.setAlpha(1); })
-      .on("pointerdown",  () => this.onMenuOpen?.()) as any;
+      .on("pointerdown",  () => this.onMenuOpen?.());
+
+    // ── Collection button ────────────────────────────────────────────────────
+    this.collectionBtn = scene.add.text(W - 100, 12, "📖", {
+      fontSize: "22px", fontFamily: "monospace",
+      stroke: "#000", strokeThickness: 2,
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(21)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerover",  function(this: Phaser.GameObjects.Text) { this.setAlpha(0.75); })
+      .on("pointerout",   function(this: Phaser.GameObjects.Text) { this.setAlpha(1); })
+      .on("pointerdown",  () => {
+        if (this.openCollection) return;
+        this.openCollection = new FishCollection(this.scene);
+        this.openCollection.onClose = () => { this.openCollection = undefined; };
+        this.openCollection.show([...this.caughtFishIds]);
+      });
 
     scene.input.keyboard!.on("keydown-ESC", () => this.onMenuOpen?.());
+  }
+
+  /** Call whenever a non-trash fish is caught to track collection progress. */
+  registerCatch(fishId: string): void {
+    this.caughtFishIds.add(fishId);
   }
 
   registerFuel(fuelSystem: FuelSystem) {
@@ -151,13 +175,13 @@ export default class HUD {
       );
     }
 
-    // ── Fuel bar ──────────────────────────────────────────────────────────────
+    // ── Fuel bar update ───────────────────────────────────────────────────────
     if (this.fuelSystem) {
       const ratio = this.fuelSystem.ratio;
-      const barW  = 64 * 3; // matches sprite green portion at 2x scale
+      const barW  = 64 * 4;
       const color = ratio > 0.5 ? 0x44dd44 : ratio > 0.25 ? 0xff8844 : 0xff4444;
 
-      this.fuelBarFill.setDisplaySize(Math.max(barW * ratio, 0), 14);
+      this.fuelBarFill.setDisplaySize(Math.max(barW * ratio, 0), 20);
       this.fuelBarFill.setFillStyle(color);
 
       const isEmpty = this.fuelSystem.isEmpty;

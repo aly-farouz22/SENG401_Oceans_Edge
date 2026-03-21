@@ -26,6 +26,9 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
 
   public fuelSystem!: FuelSystem;
 
+  /** Set from MainScene so objective tracking fires on endangered catches */
+  public onEndangeredCatch?: () => void;
+
   get money()        { return this._m.inventory.money; }
   get fish()         { return this._m.inventory.fish; }
   get upgrades()     { return this._m.upgrades; }
@@ -70,8 +73,8 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
     fishing.isInventoryFull = () => inventory.isFull;
 
     // ── Fuel system ──────────────────────────────────────────────────────────
-    this.fuelSystem        = new FuelSystem();
-    movement.fuelSystem    = this.fuelSystem;
+    this.fuelSystem     = new FuelSystem();
+    movement.fuelSystem = this.fuelSystem;
 
     fishing.onCatch = (fish) => {
       inventory.addFish(fish);
@@ -90,17 +93,20 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
         ecosystemFish.regenerationRate *= 0.9;
       }
 
-      if (fish.endangered && currentUsername) {
-        logChoice(currentUsername, "caught_endangered", {
-          fishName: fish.name,
-          season:   undefined,
-        });
+      // ── Objective tracking ────────────────────────────────────────────────
+      if (fish.endangered) {
+        this.onEndangeredCatch?.();
+
+        if (currentUsername) {
+          logChoice(currentUsername, "caught_endangered", {
+            fishName: fish.name,
+            season:   undefined,
+          });
+        }
       }
 
       if (fish.invasive && currentUsername) {
-        logChoice(currentUsername, "caught_invasive", {
-          fishName: fish.name,
-        });
+        logChoice(currentUsername, "caught_invasive", { fishName: fish.name });
       }
     };
   }

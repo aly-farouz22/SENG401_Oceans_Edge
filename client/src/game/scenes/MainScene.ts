@@ -9,10 +9,12 @@ import MarketZone from "../objects/MarketZone";
 import PauseMenu from "../objects/PauseMenu";
 import SeasonEndScreen from "../objects/SeasonEndScreen";
 import SeasonManager from "../objects/SeasonManager";
+import SeasonObjectivePopup from "../objects/SeasonObjectivePopup";
 import TrashZone from "../objects/TrashZone";
 import { EconomySystem } from "../systems/EconomySystem";
 import { EcosystemSystem } from "../systems/EcosystemSystem";
 import { EventSystem } from "../systems/EventSystem";
+import ObjectiveSystem from "../systems/ObjectiveSystem";
 import { currentUsername } from "./BootScene";
 
 export default class MainScene extends Phaser.Scene {
@@ -27,7 +29,7 @@ export default class MainScene extends Phaser.Scene {
   private eventSystem!:   EventSystem;
   private pauseMenu!:     PauseMenu;
   private toast!:         AchievementToast;
-  private oceanBg!: Phaser.GameObjects.Image;
+  private objectives!:    ObjectiveSystem;
   private hasGameEnded =  false;
   private sceneReady   =  false;
 
@@ -53,47 +55,50 @@ export default class MainScene extends Phaser.Scene {
     this.load.image("ocean_bg",       "/assets/Ocean_bg.png");
     this.load.image("market_dock",    "/assets/Harbour.png");
     this.load.image("fishing_zone",   "/assets/FishingZone.png");
-    this.load.image("ui_bar", "/assets/UI.png");
-    this.load.image("fuel_bar", "/assets/FuelBar.png");
-    this.load.image("pause_btn", "/assets/Pause.png");
+    this.load.image("ui_bar",         "/assets/UI.png");
+    this.load.image("fuel_bar",       "/assets/FuelBar.png");
+    this.load.image("pause_btn",      "/assets/Pause.png");
+    this.load.image("collection_bg",  "/assets/Collection.png");
+    this.load.image("compass",         "/assets/Compass.png");
   }
 
-create() {
-  this.sceneReady   = false;
-  this.hasGameEnded = false;
+  create() {
+    this.sceneReady   = false;
+    this.hasGameEnded = false;
 
-  AchievementManager.instance.init().then(() => {
+    AchievementManager.instance.init().then(() => {
+      const cam = this.cameras.main;
+      this.add.image(512, 384, "ocean_bg")
+        .setDisplaySize(1024, 768)
+        .setScrollFactor(0)
+        .setDepth(0);
 
-    this.ecosystem   = new EcosystemSystem();
-    this.economy     = new EconomySystem();
-    this.eventSystem = new EventSystem(this.economy, this.ecosystem);
-    this.economy.addRevenue(0);
+      // ── Compass (bottom-left, decorative) ──────────────────────────────────
+      this.add.image(110, cam.height - 150, "compass")
+        .setDisplaySize(200, 200)
+        .setScrollFactor(0)
+        .setDepth(1)
+        .setAlpha(0.35);
 
-    const pollutionLevel = this.ecosystem.getState().pollutionLevel;
+      this.toast = new AchievementToast(this);
+      AchievementManager.instance.onUnlock = (def) => this.toast.show(def);
 
-    this.oceanBg = this.add.image(512, 384, "ocean_bg")
-      .setDisplaySize(1024, 768)
-      .setScrollFactor(0)
-      .setDepth(0);
+      this.ecosystem   = new EcosystemSystem();
+      this.economy     = new EconomySystem();
+      this.eventSystem = new EventSystem(this.economy, this.ecosystem);
+      this.objectives  = new ObjectiveSystem();
 
-    const red   = 0x33;
-    const blue  = 0xff - Math.floor((pollutionLevel / 100) * (0xff - 0x33));
-    const green = 0x99 + Math.floor((pollutionLevel / 100) * (0xff - 0x99));
-    const tintColor = (red << 16) | (green << 8) | blue;
-    this.oceanBg.setTint(tintColor);
+      this.economy.addRevenue(0);
 
-    this.toast = new AchievementToast(this);
-    AchievementManager.instance.onUnlock = (def) => this.toast.show(def);
+      this.fishingZones = [
+        new FishingZone(this, 150, 350, 100, 100, "Shallow Reef"),
+        new FishingZone(this, 400, 300, 120, 120, "Deep Waters"),
+        new FishingZone(this, 650, 250, 140, 140, "Coral Bed"),
+      ];
 
-    this.fishingZones = [
-      new FishingZone(this, 150, 350, 100, 100, "Shallow Reef"),
-      new FishingZone(this, 400, 300, 120, 120, "Deep Waters"),
-      new FishingZone(this, 650, 250, 140, 140, "Coral Bed"),
-    ];
-
-    this.marketZones = [
-      new MarketZone(this, 880, 120, 120, 80, "Market Dock"),
-    ];
+      this.marketZones = [
+        new MarketZone(this, 880, 120, 120, 80, "Market Dock"),
+      ];
 
       AchievementManager.instance.updateStats({ totalTrashZones: 3 });
 
@@ -110,7 +115,6 @@ create() {
       this.hud.registerFuel(this.boat.fuelSystem);
 
       this.pauseMenu = new PauseMenu(this);
-
       this.hud.onMenuOpen = () => this.pauseMenu.open();
       this.pauseMenu.onResume = () => {};
       this.pauseMenu.onExitToMenu = () => { this.scene.restart(); };
@@ -120,25 +124,40 @@ create() {
         balance: this.economy.getState().balance,
       });
 
+      // ── Towing fee ────────────────────────────────────────────────────────
       this.boat.boatMovement.onFuelEmpty = () => {
         const TOWING_FEE = 300;
         this.economy.getState().balance       -= TOWING_FEE;
         this.economy.getState().totalExpenses += TOWING_FEE;
-
-        // Teleport to just below the dock
         const dock = this.marketZones[0];
         this.boat.setPosition(dock.x, dock.y + 100);
+        this.showEvent("🚤 Towed to Dock",
+          `You ran out of fuel and were towed back for $${TOWING_FEE}!`);
+      };
 
-        this.showEvent(
-          "🚤 Towed to Dock",
-          `You ran out of fuel and were towed back for $${TOWING_FEE}!`
-        );
+      // ── Objective: endangered catch ───────────────────────────────────────
+      this.boat.onEndangeredCatch = () => {
+        this.objectives.updateStats({ endangeredCaught: 1 });
+      };
+
+      // ── Collection tracking ───────────────────────────────────────────────
+      // Register each non-trash catch with the HUD collection
+      const origOnCatch = this.boat.fishing.onCatch;
+      this.boat.fishing.onCatch = (fish) => {
+        origOnCatch?.(fish);
+        if (fish.rarity !== "trash") {
+          // Map fish name to registry id (lowercase, underscored)
+          const id = fish.name.toLowerCase().replace(/\s+/g, "_");
+          this.hud.registerCatch(id);
+        }
       };
 
       this.eventSystem.onSpawnTrash = (x, y) => { this.spawnTrashZone(x, y); };
 
       this.boat.onSell = (earned, count) => {
         AchievementManager.instance.updateStats({ lifetimeEarnings: earned });
+        // ── Objective: money earned ──────────────────────────────────────
+        this.objectives.updateStats({ moneyEarned: earned });
         this.hud.showSellFeedback(earned, count);
 
         if (currentUsername) {
@@ -150,81 +169,83 @@ create() {
           });
         }
       };
-  this.boat.onEndSeason = (earned, count) => {
-    const econState = this.economy.getState();
 
-    const screen = new SeasonEndScreen(this);
-    screen.show({
-      earnings:        earned,
-      fuelCost:        econState.fuelCost,
-      licenseFee:      20,
-      maintenanceCost: econState.maintenanceCost,
-      currentBalance:  econState.balance,
-    });
+      this.boat.onEndSeason = (earned, count) => {
+        const econState = this.economy.getState();
+        const season    = this.seasonManager.season;
 
-    screen.onComplete = (canContinue) => {
-      const totalCosts = econState.fuelCost + 20 + econState.maintenanceCost;
-
-      econState.balance += earned;
-
-      const newBalance = econState.balance - totalCosts;
-      econState.balance = Math.max(0, newBalance);
-
-    if (newBalance < 0) {
-        AchievementManager.instance.updateStats({ gameOverCount: 1 });
-        this.hasGameEnded = true;
-
-        if (currentUsername) {
-            const ecoState = this.ecosystem.getState();
-            const extinct  = ecoState.fishPopulations
-                .filter(f => f.population <= 0)
-                .map(f => f.name as string);
-
-            saveOutcome(
-                currentUsername,
-                "bankrupt",
-                Math.floor(econState.balance),
-                this.seasonManager.season,
-                ecoState.coralHealth,
-                ecoState.pollutionLevel,
-                extinct
-            );
-        }
-
-        this.showGameOverScreen("You couldn't cover your seasonal costs!"); 
-        this.scene.pause();
-        return;
-    }
-
-      AchievementManager.instance.updateStats({ seasonsCompleted: 1 });
-
-      this.hud.showSellFeedback(earned, count);
-      this.economy.updateSeason();
-
-      if (currentUsername) {
-        saveGame(currentUsername, {
-          money:          econState.balance,
-          season:         this.seasonManager.season,
-          coralHealth:    this.ecosystem.getState().coralHealth,
-          pollutionLevel: this.ecosystem.getState().pollutionLevel,
+        const screen = new SeasonEndScreen(this);
+        screen.show({
+          earnings:        earned,
+          fuelCost:        econState.fuelCost,
+          licenseFee:      20,
+          maintenanceCost: econState.maintenanceCost,
+          currentBalance:  econState.balance,
         });
 
-        logChoice(currentUsername, "season_completed", {
-          season:  this.seasonManager.season,
-          balance: econState.balance,
-        });
-      }
+        screen.onComplete = (canContinue) => {
+          const totalCosts = econState.fuelCost + 20 + econState.maintenanceCost;
+          econState.balance += earned;
+          econState.balance -= totalCosts;
 
-      const event = this.eventSystem.triggerRandomEvent();
-      if (event) this.showEvent(event.title, event.description);
+          if (econState.balance < 0) {
+            AchievementManager.instance.updateStats({ gameOverCount: 1 });
+            this.hasGameEnded = true;
+            this.showEvent("💀 Game Over", "You couldn't cover your seasonal costs!");
 
-      const crisis = this.eventSystem.checkLowPopulationEvent();
-      if (crisis) this.showEvent(crisis.title, crisis.description);
+            if (currentUsername) {
+              const ecoState = this.ecosystem.getState();
+              const extinct  = ecoState.fishPopulations
+                .filter(f => f.population <= 0).map(f => f.name as string);
+              saveOutcome(currentUsername, "bankrupt",
+                Math.floor(econState.balance), season,
+                ecoState.coralHealth, ecoState.pollutionLevel, extinct);
+            }
+            this.scene.pause();
+            return;
+          }
 
-      this.seasonManager.advanceSeason();
-      this.boat.fuelSystem.refuelFree();
-    };
-  };
+          // ── Evaluate season objectives ─────────────────────────────────
+          this.objectives.evaluateSeason(canContinue);
+
+          AchievementManager.instance.updateStats({ seasonsCompleted: 1 });
+          if (econState.balance - earned + totalCosts < 0) {
+            AchievementManager.instance.updateStats({ recoveredFromNegative: true });
+          }
+
+          this.hud.showSellFeedback(earned, count);
+          this.economy.updateSeason();
+
+          if (currentUsername) {
+            saveGame(currentUsername, {
+              money:          econState.balance,
+              season:         this.seasonManager.season,
+              coralHealth:    this.ecosystem.getState().coralHealth,
+              pollutionLevel: this.ecosystem.getState().pollutionLevel,
+            });
+            logChoice(currentUsername, "season_completed", {
+              season:  this.seasonManager.season,
+              balance: econState.balance,
+            });
+          }
+
+          const event = this.eventSystem.triggerRandomEvent();
+          if (event) this.showEvent(event.title, event.description);
+          const crisis = this.eventSystem.checkLowPopulationEvent();
+          if (crisis) this.showEvent(crisis.title, crisis.description);
+
+          this.seasonManager.advanceSeason();
+          this.boat.fuelSystem.refuelFree();
+
+          // ── Start next season objectives + show popup ──────────────────
+          const nextSeason = season + 1;
+          this.objectives.startSeason(nextSeason);
+          const popup = new SeasonObjectivePopup(this);
+          popup.onClose = () => {};
+          popup.show(this.objectives, nextSeason);
+        };
+      };
+
       this.seasonManager.onSeasonChange = (season, seasonName) => {
         this.hud.showSeasonBanner(season, seasonName);
       };
@@ -233,7 +254,12 @@ create() {
       this.spawnTrashZone(600, 400);
       this.spawnTrashZone(750, 200);
 
-      this.sceneReady = true;
+      // ── Start season 1 objectives and show popup ──────────────────────
+      this.objectives.startSeason(1);
+      const introPopup = new SeasonObjectivePopup(this);
+      introPopup.onClose = () => { this.sceneReady = true; };
+      introPopup.show(this.objectives, 1);
+      // sceneReady is set true inside introPopup.onClose
     });
   }
 
@@ -245,10 +271,11 @@ create() {
       this.showEvent("Trash Cleaned! 🌊", "Pollution reduced and fish populations boosted.");
       this.trashZones = this.trashZones.filter(z => z !== zone);
 
+      // ── Objective: trash cleaned ─────────────────────────────────────
+      this.objectives.updateStats({ trashZonesCleaned: 1 });
+
       if (currentUsername) {
-        logChoice(currentUsername, "cleaned_trash", {
-          season: this.seasonManager.season,
-        });
+        logChoice(currentUsername, "cleaned_trash", { season: this.seasonManager.season });
       }
     };
 
@@ -258,14 +285,8 @@ create() {
   update(time: number, delta: number) {
     if (!this.sceneReady) return;
 
-      const pollutionLevel = Phaser.Math.Clamp(this.ecosystem.getState().pollutionLevel, 0, 100);
-
-    const red   = 0x33;
-    const blue  = 0xff - Math.floor((pollutionLevel / 100) * (0xff - 0x33)); 
-    const green = 0x99 + Math.floor((pollutionLevel / 100) * (0xff - 0x99)); 
-    const tintColor = (red << 16) | (green << 8) | blue;
-
-    this.oceanBg.setTint(tintColor);
+    const ecoState       = this.ecosystem.getState();
+    const pollutionLevel = ecoState.pollutionLevel;
 
     this.fishingZones
       .filter(z => !z.isGone)
@@ -283,129 +304,31 @@ create() {
       this.boat.fish,
       this.seasonManager.season,
       this.seasonManager.seasonName,
-      this.ecosystem.getState()
+      ecoState
     );
+
+    // ── Objective: ecosystem health (update each frame) ─────────────────
+    this.objectives.updateStats({ ecosystemHealth: ecoState.coralHealth });
 
     this.fishingZones
       .filter(z => !z.isGone)
       .forEach(z => z.updateRegen(delta));
 
-
-  if (!this.hasGameEnded && this.ecosystem.isGameOver()) {
-      const ecoState = this.ecosystem.getState();
-
-      let reason = "";
-      if (ecoState.coralHealth <= 0) {
-          reason = "The coral reefs have died!";
-      } else if (ecoState.pollutionLevel >= 100) {
-          reason = "The ocean is too polluted!";
-      } else {
-          reason = "The ecosystem has collapsed!";
-      }
+    if (!this.hasGameEnded && this.ecosystem.isGameOver()) {
+      this.hasGameEnded = true;
+      this.scene.pause();
 
       if (currentUsername) {
-          const extinct  = ecoState.fishPopulations
-              .filter(f => f.population <= 0)
-              .map(f => f.name as string);
-
-          saveOutcome(
-              currentUsername,
-              "ecosystem_collapse",
-              Math.floor(this.economy.getBalance()),
-              this.seasonManager.season,
-              ecoState.coralHealth,
-              ecoState.pollutionLevel,
-              extinct
-          );
+        const extinct = ecoState.fishPopulations
+          .filter(f => f.population <= 0).map(f => f.name as string);
+        saveOutcome(currentUsername, "ecosystem_collapse",
+          Math.floor(this.economy.getBalance()), this.seasonManager.season,
+          ecoState.coralHealth, ecoState.pollutionLevel, extinct);
       }
 
-      this.showGameOverScreen(reason);
+      this.showEvent("Game Over", "The ecosystem has collapsed.");
+    }
   }
-
-    
-  }
-  
-  showGameOverScreen(reason?: string) {
-  if (this.hasGameEnded) return;
-  this.hasGameEnded = true;
-
-  this.physics.pause();
-
-  const cam = this.cameras.main;
-  const cx = cam.width / 2;
-  const cy = cam.height / 2;
-
-  const econ = this.economy.getState();
-  const eco  = this.ecosystem.getState();
-
-  // Overlay
-  this.add.rectangle(cx, cy, cam.width, cam.height, 0x000000, 0.92)
-      .setDepth(1000);
-
-  this.add.text(cx, cy - 220, "GAME OVER", {
-      fontSize: "56px",
-      fontStyle: "bold",
-      color: "#ff4444",
-      fontFamily: "monospace",
-      stroke: "#000",
-      strokeThickness: 6,
-  }).setOrigin(0.5).setDepth(1001);
-
-  if (reason) {
-      this.add.text(cx, cy - 160, reason, {
-          fontSize: "28px",
-          fontStyle: "bold",
-          color: "#ffbb44",
-          fontFamily: "monospace",
-          stroke: "#000",
-          strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(1001);
-  }
-
-  const extinct = eco.fishPopulations
-      .filter(f => f.population <= 0)
-      .map(f => f.name)
-      .join(", ") || "None";
-
-  const stats = [
-      `Final Balance: $${econ.balance}`,
-      `Seasons Survived: ${this.seasonManager.season}`,
-      `Coral Health: ${Math.floor(eco.coralHealth)}%`,
-      `Pollution Level: ${Math.floor(eco.pollutionLevel)}%`,
-      `Extinct Species: ${extinct}`
-  ];
-
-  stats.forEach((line, i) => {
-      this.add.text(cx, cy - 80 + i * 40, line, {
-          fontSize: "22px",
-          color: "#ffeeaa",
-          fontFamily: "monospace",
-          stroke: "#000",
-          strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(1001);
-  });
-
-  // Restart button
-  const restart = this.add.text(cx, cy + 140, "Restart Game", {
-      fontSize: "26px",
-      color: "#44ff88",
-      fontFamily: "monospace",
-      backgroundColor: "#0a2a3a",
-      padding: { x: 30, y: 12 },
-  })
-  .setOrigin(0.5)
-  .setDepth(1001)
-  .setInteractive({ useHandCursor: true });
-
-  restart.on("pointerdown", () => {
-      this.hasGameEnded = false;
-      this.scene.restart();
-  });
-
-  restart.on("pointerover", () => restart.setScale(1.1));
-  restart.on("pointerout", () => restart.setScale(1));
-}
-
 
   private activeEventTexts: Phaser.GameObjects.Text[] = [];
 
@@ -417,23 +340,16 @@ create() {
     const y       = startY + this.activeEventTexts.length * spacing;
 
     const text = this.add.text(cx, y, `${title}\n${description}`, {
-      fontSize: "20px",
-      fontStyle: "bold",
-      color: "#ffee88",
-      fontFamily: "monospace",
-      backgroundColor: "#002233",
-      padding: { x: 20, y: 10 },
-      align: "center",
+      fontSize: "20px", fontStyle: "bold", color: "#ffee88",
+      fontFamily: "monospace", backgroundColor: "#002233",
+      padding: { x: 20, y: 10 }, align: "center",
       wordWrap: { width: cam.width * 0.8 },
     }).setOrigin(0.5, 0);
 
     this.activeEventTexts.push(text);
 
     this.tweens.add({
-      targets: text,
-      alpha: 0,
-      duration: 8000,
-      ease: "Power2",
+      targets: text, alpha: 0, duration: 4000, ease: "Power2",
       onComplete: () => {
         text.destroy();
         const index = this.activeEventTexts.indexOf(text);
