@@ -153,6 +153,7 @@ export default class PauseMenu {
       targets: all, alpha: 1, duration: 200, ease: "Cubic.easeOut",
     });
   }
+  
   private showLoadModal(saves: any[]) {
     const scene = this.scene;
     const W = scene.cameras.main.width;
