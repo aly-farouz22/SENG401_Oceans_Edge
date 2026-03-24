@@ -218,6 +218,19 @@ export default class PauseMenu {
       .on("pointerover",  function(this: Phaser.GameObjects.Text) { this.setAlpha(0.75); })
       .on("pointerout",   function(this: Phaser.GameObjects.Text) { this.setAlpha(1); });
   }
+  applySave(data: any) {
+    // Example — update player position and inventory
+    player.x = data.player.x;
+    player.y = data.player.y;
+    player.health = data.player.health;
+  
+    boat.inventory = data.boat.inventory;
+  
+    // Switch to the saved scene if different
+    if (this.scene.scene.key !== data.scene) {
+      this.scene.scene.start(data.scene);
+    }
+  }
 
   close() {
     if (!this.isOpen) return;
