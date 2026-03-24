@@ -78,24 +78,30 @@ export default class PauseMenu {
       gallery.show();
     });
 
-    // Save
-    btnSave.on("pointerdown", () => {
-      const state = this.getGameState?.() ?? {};
-      saveStatus.setColor("#66ccff").setText("💾 Saving...");
+    // Save button
+    btnSave.on("pointerdown", async () => {
+      saveStatus.setColor("#66ffcc").setText("💾 Saving game...");
 
-      fetch("/api/game/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playerId: PLAYER_ID, state }),
-      })
-        .then(() => {
-          saveStatus.setColor("#44ff88").setText("✅ Game saved!");
-          this.scene.time.delayedCall(2000, () => saveStatus.setText(""));
-        })
-        .catch(() => {
-          saveStatus.setColor("#ff4444").setText("❌ Save failed!");
-          this.scene.time.delayedCall(2000, () => saveStatus.setText(""));
+      const gameState = getGameState(); // function that returns JSON of current state
+
+      try {
+        const res = await fetch("/api/game/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ playerId: PLAYER_ID, gameState })
         });
+        const data = await res.json();
+
+        if (data.success) {
+          saveStatus.setText("✅ Game saved!");
+        } else {
+          saveStatus.setText("❌ Failed to save");
+        }
+      } catch {
+        saveStatus.setText("❌ Error saving game");
+      }
+
+      this.scene.time.delayedCall(2000, () => saveStatus.setText(""));
     });
     // Load
     btnLoad.on("pointerdown", async () => {

@@ -37,4 +37,27 @@ router.get("/saves/:playerId", async (req, res) => {
     }
   });
 
+// Save
+router.post("/save", async (req, res) => {
+    try {
+      const { playerId, gameState } = req.body;
+  
+      if (!playerId || !gameState) {
+        return res.status(400).json({ success: false, message: "Missing data" });
+      }
+  
+      const save = await prisma.save.create({
+        data: {
+          playerId,
+          data: gameState
+        }
+      });
+  
+      res.json({ success: true, save });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: "Failed to save game" });
+    }
+  });
+
 export default router;
