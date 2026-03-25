@@ -420,7 +420,7 @@ export default class MainScene extends Phaser.Scene {
     this.activeEventTexts.push(text);
 
     this.tweens.add({
-      targets: text, alpha: 0, duration: 4000, ease: "Power2",
+      targets: text, alpha: 0, duration: 16000, ease: "Power2",
       onComplete: () => {
         text.destroy();
         const index = this.activeEventTexts.indexOf(text);
