@@ -45,6 +45,10 @@ export class FuelSystem {
     return true;
   }
 
+  setFuel(amount: number): void {
+    this._fuel = Math.max(0, Math.min(FUEL_MAX, amount));
+  }
+
   /** Refill for free — used at season start. */
   refuelFree(): void {
     this._fuel = FUEL_MAX;

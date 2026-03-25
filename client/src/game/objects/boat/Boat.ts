@@ -35,6 +35,7 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
   get economy()      { return this._m.economy; }
   get fishing()      { return this._m.fishing; }
   get boatMovement() { return this._m.movement; }
+  get inventory()    { return this._m.inventory; }
 
   set onSell(cb: (earned: number, count: number) => void) {
     this._m.inventory.onSell = cb;

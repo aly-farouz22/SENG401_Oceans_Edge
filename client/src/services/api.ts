@@ -28,6 +28,53 @@ export const loadGame = async (username: string): Promise<object | null> => {
   }
 };
 
+// Checks if a username already has a saved game.
+// Returns true if the player exists, false if they are new.
+export const checkPlayerExists = async (username: string): Promise<boolean> => {
+  try {
+    const res  = await fetch(`${API_URL}/player/${username}`);
+    const data = await res.json();
+    return data.exists ?? false;
+  } catch (err) {
+    console.error("Failed to check player:", err);
+    return false;
+  }
+};
+
+// Saves the player's achievement unlocks and stats to the database.
+// Called whenever an achievement is unlocked so badges are per-player.
+export const saveAchievements = async (
+  username:    string,
+  unlockedIds: string[],
+  stats:       object
+): Promise<void> => {
+  try {
+    await fetch(`${API_URL}/achievements`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ username, unlockedIds, stats }),
+    });
+  } catch (err) {
+    console.error("Failed to save achievements:", err);
+  }
+};
+
+// Loads the player's achievement unlocks and stats from the database.
+// Returns null if no achievements saved yet.
+export const loadAchievements = async (username: string): Promise<{
+  unlockedIds: string[];
+  stats:       object;
+} | null> => {
+  try {
+    const res  = await fetch(`${API_URL}/achievements/${username}`);
+    const data = await res.json();
+    return data ?? null;
+  } catch (err) {
+    console.error("Failed to load achievements:", err);
+    return null;
+  }
+};
+
 // Logs a player decision to the database.
 // decision examples: "caught_endangered", "cleaned_trash", "bought_upgrade", "species_extinct"
 // details is optional extra context e.g. { fishName: "Bluefin Tuna", season: 2 }
