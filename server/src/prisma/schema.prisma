@@ -20,41 +20,39 @@ model Player {
 }
 
 // Stores the full game state for a player as a JSON blob.
+// Now also includes achievements so badges are per-player
+// instead of being stored globally in localStorage.
 model GameState {
-  id        String   @id @default(cuid())
-  playerId  String   @unique
-  state     Json
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  playerId     String   @unique
+  state        Json     // money, season, coralHealth, pollutionLevel
+  achievements Json     @default("{}") // unlocked badge IDs and player stats
+  updatedAt    DateTime @updatedAt
 
-  player    Player   @relation(fields: [playerId], references: [id])
+  player       Player   @relation(fields: [playerId], references: [id])
 }
 
 // Logs individual player decisions during gameplay.
-// Examples: catching an endangered fish, cleaning trash, buying an upgrade.
-// This directly reflects SDG 14 — we can track whether players are
-// making sustainable or destructive choices.
 model Choice {
   id         String   @id @default(cuid())
   playerId   String
-  decision   String   // e.g. "caught_endangered", "cleaned_trash", "bought_upgrade"
-  details    Json?    // optional extra info e.g. { fishName: "Bluefin Tuna", season: 2 }
+  decision   String
+  details    Json?
   createdAt  DateTime @default(now())
 
   player     Player   @relation(fields: [playerId], references: [id])
 }
 
 // Stores the final result when a game session ends.
-// Records ecosystem health, final balance, and whether the player
-// caused a collapse or maintained a sustainable ocean.
 model GameOutcome {
   id             String   @id @default(cuid())
   playerId       String
-  result         String   // "win", "ecosystem_collapse", "bankrupt"
+  result         String
   finalBalance   Int
   seasonsPlayed  Int
   coralHealth    Float
   pollutionLevel Float
-  extinctSpecies String[] // list of species that went extinct
+  extinctSpecies String[]
   createdAt      DateTime @default(now())
 
   player         Player   @relation(fields: [playerId], references: [id])

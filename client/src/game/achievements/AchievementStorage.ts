@@ -8,6 +8,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { DEFAULT_STATS, PlayerStats } from "./AchievementDefinitions";
+import { saveAchievements, loadAchievements } from "../../services/api";
 
 const STORAGE_KEY_UNLOCKED = "ach_unlocked";
 const STORAGE_KEY_STATS    = "ach_stats";
@@ -63,7 +64,60 @@ export class LocalAchievementStorage implements IAchievementStorage {
   }
 }
 
-// ── Stub for future backend ───────────────────────────────────────────────────
+// ── Database-backed implementation ────────────────────────────────────────────
+// Stores achievements per-player in Supabase so each username has
+// their own badges instead of sharing a single localStorage entry.
+// Pass a username and this replaces LocalAchievementStorage entirely.
+
+export class DbAchievementStorage implements IAchievementStorage {
+  private username:    string;
+  // Local cache so we don't hit the database on every unlock/save
+  private unlocked:   Set<string>  = new Set();
+  private stats:      PlayerStats  = { ...DEFAULT_STATS };
+  private loaded      = false;
+
+  constructor(username: string) {
+    this.username = username;
+  }
+
+  // Load from database once, cache locally after that
+  private async ensureLoaded(): Promise<void> {
+    if (this.loaded) return;
+    this.loaded = true;
+
+    const data = await loadAchievements(this.username);
+    if (data) {
+      this.unlocked = new Set(data.unlockedIds);
+      this.stats    = { ...DEFAULT_STATS, ...(data.stats as Partial<PlayerStats>) };
+    }
+  }
+
+  async loadUnlocked(): Promise<Set<string>> {
+    await this.ensureLoaded();
+    return new Set(this.unlocked);
+  }
+
+  async unlock(achievementId: string): Promise<void> {
+    await this.ensureLoaded();
+    this.unlocked.add(achievementId);
+    // Persist to database immediately on unlock
+    await saveAchievements(this.username, [...this.unlocked], this.stats);
+  }
+
+  async loadStats(): Promise<PlayerStats> {
+    await this.ensureLoaded();
+    return { ...this.stats };
+  }
+
+  async saveStats(stats: PlayerStats): Promise<void> {
+    await this.ensureLoaded();
+    this.stats = stats;
+    // Persist to database
+    await saveAchievements(this.username, [...this.unlocked], this.stats);
+  }
+}
+
+// ── Stub for future backend (kept from original) ──────────────────────────────
 // When you're ready, replace this with real fetch() calls and pass it
 // into AchievementManager instead of LocalAchievementStorage.
 //

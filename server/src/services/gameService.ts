@@ -1,7 +1,6 @@
 import { prisma } from "../db";
 
 // ── Helper: get or create a player by username ────────────────────────────
-// Used by all service functions so we never duplicate player creation logic.
 const getOrCreatePlayer = async (username: string) => {
   return prisma.player.upsert({
     where:  { username },
@@ -18,7 +17,7 @@ export const saveGameState = async (data: { username: string; state: object }) =
   return prisma.gameState.upsert({
     where:  { playerId: player.id },
     update: { state: data.state },
-    create: { playerId: player.id, state: data.state },
+    create: { playerId: player.id, state: data.state, achievements: {} },
   });
 };
 
@@ -30,11 +29,56 @@ export const loadGameState = async (username: string) => {
   return player?.gameState ?? null;
 };
 
-// ── Log a player choice ───────────────────────────────────────────────────
-// Called whenever the player makes a significant decision:
-//   "caught_endangered", "cleaned_trash", "bought_upgrade", "species_extinct"
-// details is optional extra context e.g. { fishName: "Bluefin Tuna", season: 2 }
+// ── Check if a player already exists ─────────────────────────────────────
+// Used by BootScene to decide whether to show "Continue" or start fresh.
+export const playerExists = async (username: string): Promise<boolean> => {
+  const player = await prisma.player.findUnique({ where: { username } });
+  return player !== null;
+};
 
+// ── Save achievements for a player ───────────────────────────────────────
+// Stores unlocked badge IDs and player stats in the GameState row
+// so each player has their own badges instead of sharing localStorage.
+export const saveAchievements = async (data: {
+  username:     string;
+  unlockedIds:  string[];
+  stats:        object;
+}) => {
+  const player = await getOrCreatePlayer(data.username);
+
+  const achievements = {
+    unlockedIds: data.unlockedIds,
+    stats:       data.stats,
+  };
+
+  return prisma.gameState.upsert({
+    where:  { playerId: player.id },
+    update: { achievements },
+    create: { playerId: player.id, state: {}, achievements },
+  });
+};
+
+// ── Load achievements for a player ───────────────────────────────────────
+// Returns the stored unlocked IDs and stats, or null if none saved yet.
+export const loadAchievements = async (username: string): Promise<{
+  unlockedIds: string[];
+  stats:       object;
+} | null> => {
+  const player = await prisma.player.findUnique({
+    where:   { username },
+    include: { gameState: true },
+  });
+
+  if (!player?.gameState?.achievements) return null;
+
+  const ach = player.gameState.achievements as any;
+  return {
+    unlockedIds: ach.unlockedIds ?? [],
+    stats:       ach.stats       ?? {},
+  };
+};
+
+// ── Log a player choice ───────────────────────────────────────────────────
 export const logChoice = async (data: {
   username: string;
   decision: string;
@@ -52,9 +96,6 @@ export const logChoice = async (data: {
 };
 
 // ── Save a game outcome ───────────────────────────────────────────────────
-// Called when the game ends — either the player wins, goes bankrupt,
-// or causes an ecosystem collapse.
-
 export const saveOutcome = async (data: {
   username:       string;
   result:         string;

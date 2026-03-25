@@ -1,5 +1,8 @@
 import Phaser from "phaser";
 import BadgeGalleryScreen from "../achievements/BadgeGalleryScreen";
+import { currentUsername } from "../scenes/BootScene";
+import { saveGame, loadGame } from "../../services/api";
+import { AchievementManager } from "../achievements/AchievementManager";
 
 const PLAYER_ID = "player_1";
 
@@ -78,55 +81,61 @@ export default class PauseMenu {
       gallery.show();
     });
 
-    // Save button
+    // Save button — uses currentUsername and api.ts saveGame instead of
+    // the old hardcoded PLAYER_ID and non-existent /api/game/save endpoint
     btnSave.on("pointerdown", async () => {
+      if (!currentUsername) {
+        saveStatus.setColor("#ff4444").setText("❌ No username set");
+        this.scene.time.delayedCall(2000, () => saveStatus.setText(""));
+        return;
+      }
+
       saveStatus.setColor("#66ffcc").setText("💾 Saving game...");
 
-      const gameState = getGameState(); // function that returns JSON of current state
+      const gameState = this.getGameState?.() ?? {};
 
       try {
-        const res = await fetch("/api/game/save", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ playerId: PLAYER_ID, gameState })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          saveStatus.setText("✅ Game saved!");
-        } else {
-          saveStatus.setText("❌ Failed to save");
-        }
+        await saveGame(currentUsername, gameState);
+        saveStatus.setColor("#44ff88").setText("✅ Game saved!");
       } catch {
-        saveStatus.setText("❌ Error saving game");
+        saveStatus.setColor("#ff4444").setText("❌ Error saving game");
       }
 
       this.scene.time.delayedCall(2000, () => saveStatus.setText(""));
     });
-    // Load
+
+    // Load button — uses currentUsername and api.ts loadGame instead of
+    // the old hardcoded PLAYER_ID and non-existent /api/game/saves endpoint
     btnLoad.on("pointerdown", async () => {
+      if (!currentUsername) {
+        saveStatus.setColor("#ff4444").setText("❌ No username set");
+        this.scene.time.delayedCall(2000, () => saveStatus.setText(""));
+        return;
+      }
+
       saveStatus.setColor("#66ffcc").setText("📂 Loading saves...");
+
       try {
-        const res = await fetch(`/api/game/saves/${PLAYER_ID}`);
-        const data = await res.json();
-        if (data.success && data.saves.length > 0) {
-          this.showLoadModal(data.saves); // show modal to pick save
+        const saved = await loadGame(currentUsername);
+        if (saved) {
+          saveStatus.setColor("#44ff88").setText("✅ Save found!");
+          // Emit to MainScene so it can apply the saved state if wired up
+          this.scene.events.emit("loadGameState", saved);
         } else {
-          saveStatus.setText("❌ No saves found");
-          this.scene.time.delayedCall(2000, () => saveStatus.setText(""));
+          saveStatus.setColor("#ff4444").setText("❌ No saves found");
         }
       } catch {
-        saveStatus.setText("❌ Failed to fetch saves");
-        this.scene.time.delayedCall(2000, () => saveStatus.setText(""));
+        saveStatus.setColor("#ff4444").setText("❌ Failed to fetch saves");
       }
+
+      this.scene.time.delayedCall(2000, () => saveStatus.setText(""));
     });
 
     // Exit to BootScene
     btnExit.on("pointerdown", () => {
-      this.scene.physics.resume();
       this.scene.cameras.main.fadeOut(400, 0, 0, 0);
       this.scene.cameras.main.once("camerafadeoutcomplete", () => {
-        this.scene.scene.start("BootScene");
+        window.location.reload();
       });
     });
 
@@ -142,9 +151,8 @@ export default class PauseMenu {
       this.onResume?.();
     });
 
-
     const all = [overlay, panel, border, title, divider, saveStatus,
-                 btnResume, btnBadges, btnSave, btnExit, btnQuit];
+                 btnResume, btnBadges, btnSave, btnLoad, btnExit, btnQuit];
 
     this.container = this.scene.add.container(0, 0, all).setDepth(DEPTH);
 
@@ -153,61 +161,77 @@ export default class PauseMenu {
       targets: all, alpha: 1, duration: 200, ease: "Cubic.easeOut",
     });
   }
-  
-  private showLoadModal(saves: any[]) {
-    const scene = this.scene;
-    const W = scene.cameras.main.width;
-    const H = scene.cameras.main.height;
-    const cx = W / 2;
-    const cy = H / 2;
-    const DEPTH = 600;
 
-    const overlay = scene.add.rectangle(cx, cy, W, H, 0x000000, 0.8)
-      .setScrollFactor(0).setDepth(DEPTH)
-      .setInteractive({ useHandCursor: true });
-    
-    const panel = scene.add.rectangle(cx, cy, 360, 400, 0x002233, 1)
-      .setScrollFactor(0).setDepth(DEPTH + 1);
+  // showLoadModal kept from original — commented out since it references
+  // the old /api/game/saves endpoint and non-existent save model.
+  // Can be re-enabled once a proper save history endpoint is added.
+  //
+  // private showLoadModal(saves: any[]) {
+  //   const scene = this.scene;
+  //   const W = scene.cameras.main.width;
+  //   const H = scene.cameras.main.height;
+  //   const cx = W / 2;
+  //   const cy = H / 2;
+  //   const DEPTH = 600;
+  //
+  //   const overlay = scene.add.rectangle(cx, cy, W, H, 0x000000, 0.8)
+  //     .setScrollFactor(0).setDepth(DEPTH)
+  //     .setInteractive({ useHandCursor: true });
+  //
+  //   const panel = scene.add.rectangle(cx, cy, 360, 400, 0x002233, 1)
+  //     .setScrollFactor(0).setDepth(DEPTH + 1);
+  //
+  //   const closeBtn = scene.add.text(cx, cy + 180, "✖ Close", {
+  //     fontSize: "16px", fontFamily: "monospace",
+  //     color: "#ff6666", backgroundColor: "#001a2e",
+  //     padding: { x: 20, y: 10 },
+  //   }).setOrigin(0.5).setDepth(DEPTH + 2)
+  //     .setInteractive({ useHandCursor: true });
+  //
+  //   closeBtn.on("pointerdown", () => {
+  //     overlay.destroy();
+  //     panel.destroy();
+  //     closeBtn.destroy();
+  //     listTexts.forEach(t => t.destroy());
+  //   });
+  //
+  //   const listTexts: Phaser.GameObjects.Text[] = [];
+  //   saves.forEach((save, i) => {
+  //     const t = scene.add.text(cx, cy - 160 + i * 40, `⏱ ${new Date(save.createdAt).toLocaleString()}`, {
+  //       fontSize: "14px", fontFamily: "monospace",
+  //       color: "#44ffcc", backgroundColor: "#001a2e",
+  //       padding: { x: 10, y: 6 }
+  //     }).setOrigin(0.5).setDepth(DEPTH + 2)
+  //       .setInteractive({ useHandCursor: true });
+  //
+  //     t.on("pointerdown", () => {
+  //       this.close();
+  //       fetch("/api/game/load/" + PLAYER_ID)
+  //         .then(res => res.json())
+  //         .then(data => {
+  //           if (this.getGameState) {
+  //             this.getGameState();
+  //             scene.events.emit("loadGameState", data);
+  //           }
+  //         });
+  //     });
+  //     listTexts.push(t);
+  //   });
+  // }
 
-    const closeBtn = scene.add.text(cx, cy + 180, "✖ Close", {
-      fontSize: "16px", fontFamily: "monospace",
-      color: "#ff6666", backgroundColor: "#001a2e",
-      padding: { x: 20, y: 10 },
-    }).setOrigin(0.5).setDepth(DEPTH + 2)
-      .setInteractive({ useHandCursor: true });
-
-    closeBtn.on("pointerdown", () => {
-      overlay.destroy();
-      panel.destroy();
-      closeBtn.destroy();
-      listTexts.forEach(t => t.destroy());
-    });
-
-    const listTexts: Phaser.GameObjects.Text[] = [];
-    saves.forEach((save, i) => {
-      const t = scene.add.text(cx, cy - 160 + i * 40, `⏱ ${new Date(save.createdAt).toLocaleString()}`, {
-        fontSize: "14px", fontFamily: "monospace",
-        color: "#44ffcc", backgroundColor: "#001a2e",
-        padding: { x: 10, y: 6 }
-      }).setOrigin(0.5).setDepth(DEPTH + 2)
-        .setInteractive({ useHandCursor: true });
-
-      t.on("pointerdown", () => {
-        this.close();
-        fetch("/api/game/load/" + PLAYER_ID)
-          .then(res => res.json())
-          .then(data => {
-            if (this.getGameState) {
-              this.getGameState(); // could pass data to MainScene.applySavedGame
-              // Implement your MainScene.applySavedGame call here
-              scene.events.emit("loadGameState", data);
-            }
-          });
-      });
-      listTexts.push(t);
-    });
-  }
-
+  // applySave kept from original — commented out since it references
+  // undefined variables (player, boat). Can be re-enabled once
+  // MainScene exposes those via a proper interface.
+  //
+  // applySave(data: any) {
+  //   player.x = data.player.x;
+  //   player.y = data.player.y;
+  //   player.health = data.player.health;
+  //   boat.inventory = data.boat.inventory;
+  //   if (this.scene.scene.key !== data.scene) {
+  //     this.scene.scene.start(data.scene);
+  //   }
+  // }
 
   private makeButton(x: number, y: number, label: string, color: string, depth: number) {
     return this.scene.add.text(x, y, label, {
@@ -218,19 +242,6 @@ export default class PauseMenu {
       .setInteractive({ useHandCursor: true })
       .on("pointerover",  function(this: Phaser.GameObjects.Text) { this.setAlpha(0.75); })
       .on("pointerout",   function(this: Phaser.GameObjects.Text) { this.setAlpha(1); });
-  }
-  applySave(data: any) {
-    // Example — update player position and inventory
-    player.x = data.player.x;
-    player.y = data.player.y;
-    player.health = data.player.health;
-  
-    boat.inventory = data.boat.inventory;
-  
-    // Switch to the saved scene if different
-    if (this.scene.scene.key !== data.scene) {
-      this.scene.scene.start(data.scene);
-    }
   }
 
   close() {
