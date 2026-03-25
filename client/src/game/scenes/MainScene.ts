@@ -108,12 +108,6 @@ export default class MainScene extends Phaser.Scene {
         if (typeof savedState.pollutionLevel === "number") {
           this.ecosystem.getState().pollutionLevel = savedState.pollutionLevel;
         }
-        if (typeof savedState.fuel === "number") {
-          this.boat.fuelSystem.setFuel(savedState.fuel);
-        }
-        if (Array.isArray(savedState.fish)) {
-          savedState.fish.forEach((f: any) => this.boat.inventory.addFish(f));
-        }
       }
 
       this.fishingZones = [
@@ -142,6 +136,17 @@ export default class MainScene extends Phaser.Scene {
       this.boat.registerMarketZones(this.marketZones);
       this.marketZones.forEach(z => z.registerUpgrades(this.boat.upgrades));
       this.marketZones.forEach(z => z.registerFuel(this.boat.fuelSystem, this.economy));
+
+      // ── Restore fuel and fish inventory after boat is created ─────────────
+      // Must run after new Boat() so fuelSystem and inventory exist.
+      if (savedState) {
+        if (typeof savedState.fuel === "number") {
+          this.boat.fuelSystem.setFuel(savedState.fuel);
+        }
+        if (Array.isArray(savedState.fish)) {
+          savedState.fish.forEach((f: any) => this.boat.inventory.addFish(f));
+        }
+      }
 
       this.hud = new HUD(this);
       this.hud.registerFuel(this.boat.fuelSystem);
