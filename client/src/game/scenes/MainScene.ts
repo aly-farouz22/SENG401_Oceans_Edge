@@ -66,16 +66,16 @@ export default class MainScene extends Phaser.Scene {
     this.sceneReady   = false;
     this.hasGameEnded = false;
 
-    // Read saved state passed from BootScene when player clicks Continue.
-    // savedState contains: { state: { money, season, coralHealth, pollutionLevel, fuel, fish } }
+    // Read saved state passed from MenuScene when player clicks Load Game.
+    // MenuScene passes { savedGame: saved } so we read savedGame.state
     const sceneData  = this.scene.settings.data as any;
-    const savedState = sceneData?.savedState?.state ?? null;
+    const savedState = sceneData?.savedGame?.state ?? null;
 
     AchievementManager.instance.init().then(() => {
       const cam = this.cameras.main;
       const W = this.scale.width;
       const H = this.scale.height;
-      
+
       this.add.image(0, 0, "ocean_bg")
         .setOrigin(0, 0)
         .setDisplaySize(W, H)
@@ -103,15 +103,9 @@ export default class MainScene extends Phaser.Scene {
       // Restores money, coral health and pollution from the database.
       // Runs after systems are initialized so we can safely set values.
       if (savedState) {
-        if (typeof savedState.money === "number") {
-          this.economy.getState().balance = savedState.money;
-        }
-        if (typeof savedState.coralHealth === "number") {
-          this.ecosystem.getState().coralHealth = savedState.coralHealth;
-        }
-        if (typeof savedState.pollutionLevel === "number") {
-          this.ecosystem.getState().pollutionLevel = savedState.pollutionLevel;
-        }
+        if (typeof savedState.money         === "number") this.economy.getState().balance            = savedState.money;
+        if (typeof savedState.coralHealth   === "number") this.ecosystem.getState().coralHealth      = savedState.coralHealth;
+        if (typeof savedState.pollutionLevel=== "number") this.ecosystem.getState().pollutionLevel   = savedState.pollutionLevel;
       }
 
       this.fishingZones = [
@@ -144,12 +138,8 @@ export default class MainScene extends Phaser.Scene {
       // ── Restore fuel and fish inventory after boat is created ─────────────
       // Must run after new Boat() so fuelSystem and inventory exist.
       if (savedState) {
-        if (typeof savedState.fuel === "number") {
-          this.boat.fuelSystem.setFuel(savedState.fuel);
-        }
-        if (Array.isArray(savedState.fish)) {
-          savedState.fish.forEach((f: any) => this.boat.inventory.addFish(f));
-        }
+        if (typeof savedState.fuel === "number") this.boat.fuelSystem.setFuel(savedState.fuel);
+        if (Array.isArray(savedState.fish))      savedState.fish.forEach((f: any) => this.boat.inventory.addFish(f));
       }
 
       this.hud = new HUD(this);
@@ -185,6 +175,7 @@ export default class MainScene extends Phaser.Scene {
       };
 
       // ── Collection tracking ───────────────────────────────────────────────
+      // Register each non-trash catch with the HUD collection
       const origOnCatch = this.boat.fishing.onCatch;
       this.boat.fishing.onCatch = (fish) => {
         origOnCatch?.(fish);
@@ -288,7 +279,7 @@ export default class MainScene extends Phaser.Scene {
           this.boat.fuelSystem.refuelFree();
 
           // ── Spawn extra trash zones each season ────────────────────────────
-          const extraTrash = Math.min(Math.floor(this.seasonManager.season / 2), 3);
+          const extraTrash   = Math.min(Math.floor(this.seasonManager.season / 2), 3);
           for (let t = 0; t < extraTrash; t++) {
             const tx = Phaser.Math.Between(80, this.cameras.main.width  - 80);
             const ty = Phaser.Math.Between(80, this.cameras.main.height - 150);
@@ -311,7 +302,7 @@ export default class MainScene extends Phaser.Scene {
         this.hud.showSeasonBanner(season, seasonName);
       };
 
-      // Start objectives for the current season (saved or 1)
+      // Start objectives for current season (saved or 1)
       const startSeason = savedState?.season ?? 1;
       this.objectives.startSeason(startSeason);
 
@@ -322,6 +313,7 @@ export default class MainScene extends Phaser.Scene {
         const introPopup = new SeasonObjectivePopup(this);
         introPopup.onClose = () => { this.sceneReady = true; };
         introPopup.show(this.objectives, startSeason);
+        // sceneReady is set true inside introPopup.onClose
       }
     });
   }

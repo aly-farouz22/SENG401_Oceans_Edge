@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { setCurrentUsername } from "./BootScene";
+import { AchievementManager } from "../achievements/AchievementManager";
 
 export default class LoginScene extends Phaser.Scene {
   private usernameValue = "";
@@ -161,7 +162,7 @@ export default class LoginScene extends Phaser.Scene {
     this.time.delayedCall(600, () => this.inputEl.focus());
   }
 
-  private onSubmit() {
+  private async onSubmit() {
     if (!this.usernameValue) {
       this.inputEl.style.borderColor = "#ff4455";
       this.errorText.setText(">> ERROR: Name cannot be empty!").setVisible(true);
@@ -176,6 +177,11 @@ export default class LoginScene extends Phaser.Scene {
     }
 
     setCurrentUsername(this.usernameValue);
+
+    // Switch achievements to database storage for this specific player
+    // so badges are isolated per username instead of shared in localStorage
+    await AchievementManager.instance.switchToDbStorage(this.usernameValue);
+
     this.inputDom.destroy();
 
     // Flash submit button before transitioning
