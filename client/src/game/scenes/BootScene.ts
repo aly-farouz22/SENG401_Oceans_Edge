@@ -1,14 +1,14 @@
 import Phaser from "phaser";
-import { loadGame } from "../../services/api";
 import { AchievementManager } from "../achievements/AchievementManager";
 
 export let currentUsername = "";
 
+export function setCurrentUsername(name: string) {
+  currentUsername = name;
+}
+
 export default class BootScene extends Phaser.Scene {
-  private loadComplete = false;
   private playButton: Phaser.GameObjects.Text | null = null;
-  private usernameInput: Phaser.GameObjects.DOMElement | null = null;
-  private usernameValue = "";
 
   constructor() {
     super("BootScene");
@@ -16,158 +16,98 @@ export default class BootScene extends Phaser.Scene {
 
   preload() {
     this.load.image("boot_bg", "/assets/Boot_bg.png");
-    this.load.image("boat",    "/assets/boat.png");
-
-    this.load.on("complete", () => {
-      this.loadComplete = true;
-      this.createTitleScreen();
-      this.showPlayButton();
-    });
+    this.load.image("boat", "/assets/Boat.png");
+    this.load.image("fish_anchovy", "/assets/Anchovy_Sprat_Common.png");
+    this.load.image("fish_aurora", "/assets/Aurora_Trout_Endangered.png");
+    this.load.image("fish_crab", "/assets/European_Green_Crab_Invasive.png");
+    this.load.image("fish_haddock", "/assets/Haddock_Common.png");
+    this.load.image("fish_lionfish", "/assets/Lionfish_Invasive.png");
+    this.load.image("fish_swordfish", "/assets/North_Atlantic_Swordfish_Common.png");
+    this.load.image("fish_opah", "/assets/Opah_Fish_Common.png");
+    this.load.image("fish_halibut", "/assets/Pacific_Halibut_Common.png");
+    this.load.image("fish_snapper", "/assets/Red_Snapper_Common.png");
+    this.load.image("fish_bluefin", "/assets/Southern_Bluefin_Tuna_Endangered.png");
+    this.load.image("upgrade_fuel", "/assets/Fuel_Upgrade.png");
+    this.load.image("upgrade_net", "/assets/Net_Upgrade.png");
+    this.load.image("trash_bottle", "/assets/Water_Bottle_Trash.png");
+    this.load.image("trash_cigarette", "/assets/Cigarette_Buds_Trash.png");
+    this.load.image("payment_bg", "/assets/Payment.png");
+    this.load.image("ocean_bg", "/assets/Ocean_bg.png");
+    this.load.image("market_dock", "/assets/Harbour.png");
+    this.load.image("fishing_zone", "/assets/FishingZone.png");
+    this.load.image("ui_bar", "/assets/UI.png");
+    this.load.image("fuel_bar", "/assets/FuelBar.png");
+    this.load.image("pause_btn", "/assets/Pause.png");
+    this.load.image("collection_bg", "/assets/Collection.png");
+    this.load.image("compass", "/assets/Compass.png");
   }
 
   create() {
     AchievementManager.instance.init();
-    if (this.loadComplete) {
-      this.createTitleScreen();
-      this.showPlayButton();
-    }
-  }
 
-  private createTitleScreen() {
-    const W  = this.cameras.main.width;
-    const H  = this.cameras.main.height;
+    const W = this.cameras.main.width;
+    const H = this.cameras.main.height;
     const cx = W / 2;
     const cy = H / 2;
 
-    // ── Background sprite ─────────────────────────────────────────────────
+    // Background (clear, no dark overlay)
     this.add.image(cx, cy, "boot_bg")
       .setDisplaySize(W, H)
       .setDepth(0);
 
-    // ── Loading indicator ─────────────────────────────────────────────────
-    this.add.text(cx, cy + 160, "Loading...", {
-      fontSize:   "13px",
-      color:      "#336677",
+    // Title
+    this.add.text(cx, cy - 60, "OCEAN'S EDGE", {
+      fontSize: "44px",
+      fontStyle: "bold",
+      color: "#44ffaa",
       fontFamily: "monospace",
+      stroke: "#002211",
+      strokeThickness: 6,
+    }).setOrigin(0.5);
 
-    }).setOrigin(0.5).setName("loadingText").setDepth(1);
-     this.add.text(cx, cy + 90, "UN Sustainable Development Goal 14", {
-      fontSize:   "16px",
-      color:      "#ffffff",
+    // Subtitle (your custom text)
+    this.add.text(cx, cy + 10, "SENG 401 Project – Group 3", {
+      fontSize: "18px",
+      color: "#ffffff",
       fontFamily: "monospace",
     }).setOrigin(0.5);
 
-    this.add.text(
-      cx, cy + 48,
-      "Manage your fishing community.\nBalance profit with ocean health.",
-      {
-        fontSize:   "15px",
-        color:      "#ffffff",
-        fontFamily: "monospace",
-        align:      "center",
-      }
-    ).setOrigin(0.5);
-
-  }
-
-  private showPlayButton() {
-    const cx = this.cameras.main.width  / 2;
-    const cy = this.cameras.main.height / 2;
-
-    const loadingText = this.children.getByName("loadingText") as Phaser.GameObjects.Text | null;
-    if (loadingText) loadingText.setVisible(false);
-
-    // ── Username label ────────────────────────────────────────────────────
-    this.add.text(cx, cy + 110, "Enter your username:", {
-      fontSize:   "14px",
-      color:      "#a0e8ff",
+    // Play button
+    this.playButton = this.add.text(cx, cy + 100, "▶ Click to Play", {
+      fontSize: "26px",
+      fontStyle: "bold",
+      color: "#44ffaa",
       fontFamily: "monospace",
-      stroke:     "#001122",
-      strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(2);
-
-    // ── Username input ────────────────────────────────────────────────────
-    const inputEl = document.createElement("input");
-    inputEl.type        = "text";
-    inputEl.placeholder = "e.g. captain123";
-    inputEl.maxLength   = 20;
-    inputEl.style.cssText = `
-      width: 220px;
-      padding: 8px 12px;
-      font-size: 16px;
-      font-family: monospace;
-      background: #001a2e;
-      color: #a0e8ff;
-      border: 2px solid #336677;
-      border-radius: 4px;
-      outline: none;
-      text-align: center;
-    `;
-
-    this.usernameInput = this.add.dom(cx, cy + 140, inputEl).setDepth(10);
-
-    inputEl.addEventListener("input", () => {
-      this.usernameValue = inputEl.value.trim();
-    });
-
-    // ── Play button ───────────────────────────────────────────────────────
-    this.playButton = this.add
-      .text(cx, cy + 200, "▶  Click to Play", {
-        fontSize:        "24px",
-        fontStyle:       "bold",
-        color:           "#44ffaa",
-        fontFamily:      "monospace",
-        stroke:          "#002211",
-        strokeThickness: 4,
-        backgroundColor: "#0a3322",
-        padding:         { x: 32, y: 14 },
-      })
+      stroke: "#002211",
+      strokeThickness: 4,
+      backgroundColor: "#0a3322",
+      padding: { x: 32, y: 14 },
+    })
       .setOrigin(0.5)
-      .setAlpha(0)
-      .setDepth(2)
       .setInteractive({ useHandCursor: true });
 
     this.playButton.on("pointerover", () => this.playButton?.setColor("#ffffff"));
-    this.playButton.on("pointerout",  () => this.playButton?.setColor("#44ffaa"));
-    this.playButton.on("pointerdown", async () => {
-      if (!this.usernameValue) {
-        inputEl.style.borderColor = "#ff4444";
-        setTimeout(() => { inputEl.style.borderColor = "#336677"; }, 1000);
-        return;
-      }
+    this.playButton.on("pointerout", () => this.playButton?.setColor("#44ffaa"));
 
-      currentUsername = this.usernameValue;
-
-      const saved = await loadGame(this.usernameValue);
-      if (saved) {
-        console.log("Saved game found for", this.usernameValue);
-      }
-
-      this.usernameInput?.destroy();
-      this.tweens.killTweensOf(this.playButton!);
+    this.playButton.on("pointerdown", () => {
       this.cameras.main.fadeOut(500, 0, 0, 0);
       this.cameras.main.once("camerafadeoutcomplete", () => {
-        this.scene.start("MainScene");
+        this.scene.start("LoginScene");
       });
     });
 
-    // Fade in then pulse
+    // Smooth fade in
+    this.cameras.main.fadeIn(500, 0, 0, 0);
+
+    // Subtle pulse animation (makes it feel alive)
     this.tweens.add({
-      targets:  this.playButton,
-      alpha:    1,
-      duration: 400,
-      ease:     "Cubic.easeOut",
-      onComplete: () => {
-        this.tweens.add({
-          targets:  this.playButton,
-          scaleX:   1.05,
-          scaleY:   1.05,
-          duration: 800,
-          yoyo:     true,
-          repeat:   -1,
-          ease:     "Sine.easeInOut",
-        });
-      },
+      targets: this.playButton,
+      scaleX: 1.05,
+      scaleY: 1.05,
+      duration: 900,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
     });
   }
 }

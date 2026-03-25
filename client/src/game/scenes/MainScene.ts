@@ -68,8 +68,12 @@ export default class MainScene extends Phaser.Scene {
 
     AchievementManager.instance.init().then(() => {
       const cam = this.cameras.main;
-      this.add.image(512, 384, "ocean_bg")
-        .setDisplaySize(1024, 768)
+      const W = this.scale.width;
+      const H = this.scale.height;
+      
+      this.add.image(0, 0, "ocean_bg")
+        .setOrigin(0, 0)
+        .setDisplaySize(W, H)
         .setScrollFactor(0)
         .setDepth(0);
 
