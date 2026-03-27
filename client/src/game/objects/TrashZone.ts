@@ -38,6 +38,36 @@ export default class TrashZone extends Phaser.GameObjects.Zone {
   get isGone()     { return this._destroyed; }
   get isCleaning() { return false; }
 
+  get saveState() {
+    return {
+      x:           this.x,
+      y:           this.y,
+      trashStock:  this.trashStock,
+      ageMs:       this.ageMs,
+      isSeeeping:  this.isSeeeping,
+      seepAccumMs: this.seepAccumMs,
+    };
+  }
+  set currentTrashStock(value: number)  { this.trashStock  = value; }
+  set currentAgeMs(value: number)       { this.ageMs       = value; }
+  set currentSeepAccumMs(value: number) { this.seepAccumMs = value; }
+  set currentIsSeeeping(value: boolean) { this.isSeeeping  = value; }
+  refreshBar() {
+    const pct = Math.max(0, this.trashStock / TRASH_STOCK);
+    this.barFill.setDisplaySize(BAR_WIDTH * pct, BAR_HEIGHT);
+  }
+
+  restoreSeepState() {
+    if (!this.isSeeeping) return;
+    this.glowCircle.setFillStyle(0xff2200);
+    this.seepWarning.setVisible(true);
+    this.scene.tweens.add({
+      targets: this.seepWarning,
+      alpha: { from: 0.4, to: 1 },
+      duration: 600, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
+    });
+  }
+
   public onCleaned?: () => void;
   /** Called when seep starts — MainScene can show a warning event */
   public onSeepStart?: () => void;

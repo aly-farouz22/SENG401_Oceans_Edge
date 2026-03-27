@@ -144,6 +144,31 @@ export default class MainScene extends Phaser.Scene {
             }
           });
         }
+        if (Array.isArray(savedState.trashZones)) {
+          savedState.trashZones.forEach((tz: any) => {
+            const zone = new TrashZone(this, tz.x, tz.y, 100, 100, this.ecosystem);
+            this.trashZones.push(zone);
+            zone.fishingZones       = this.fishingZones;
+            zone.currentTrashStock  = tz.trashStock;
+            zone.currentAgeMs       = tz.ageMs;
+            zone.currentSeepAccumMs = tz.seepAccumMs;
+            zone.currentIsSeeeping  = tz.isSeeeping;
+            zone.refreshBar();
+            zone.restoreSeepState();
+            zone.onSeepStart = () => {
+              this.showEvent("☠ Trash Seeping!", "An uncleaned trash zone is now draining a nearby fishing area!");
+            };
+            zone.onCleaned = () => {
+              this.showEvent("Trash Cleaned! 🌊", "Pollution reduced and fish populations boosted.");
+              this.trashZones = this.trashZones.filter(z => z !== zone);
+              this.objectives.updateStats({ trashZonesCleaned: 1 });
+              if (currentUsername) {
+                logChoice(currentUsername, "cleaned_trash", { season: this.seasonManager.season });
+              }
+            };
+            this.boat.registerTrashZones(this.trashZones);
+          });
+        }
       }
 
       this.hud = new HUD(this);
@@ -174,6 +199,7 @@ export default class MainScene extends Phaser.Scene {
         zoneStocks:      this.fishingZones.map(z => z.currentStock),
         endangeredCount: this.hud.endangeredCaught,
         caughtCollection: this.hud.caughtCollection,
+        trashZones: this.trashZones.filter(z => !z.isGone).map(z => z.saveState),
       });
 
       // Towing fee
@@ -219,6 +245,7 @@ export default class MainScene extends Phaser.Scene {
             zoneStocks:      this.fishingZones.map(z => z.currentStock),
             endangeredCount: this.hud.endangeredCaught,
             caughtCollection: this.hud.caughtCollection,
+            trashZones: this.trashZones.filter(z => !z.isGone).map(z => z.saveState),
           });
         }
       };
@@ -280,6 +307,7 @@ export default class MainScene extends Phaser.Scene {
               zoneStocks:      this.fishingZones.map(z => z.currentStock),
               endangeredCount: this.hud.endangeredCaught,
               caughtCollection: this.hud.caughtCollection,
+              trashZones: this.trashZones.filter(z => !z.isGone).map(z => z.saveState),
             });
             logChoice(currentUsername, "season_completed", {
               season:  this.seasonManager.season,
