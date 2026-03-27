@@ -151,6 +151,9 @@ export default class MainScene extends Phaser.Scene {
       if (savedState && typeof savedState.endangeredCount === "number") {
         this.hud.endangeredCaught = savedState.endangeredCount;
       }
+      if (savedState && Array.isArray(savedState.caughtCollection)) {
+        this.hud.caughtCollection = savedState.caughtCollection;
+      }
       this.hud.onEndangeredLimit = () => {
         this.hasGameEnded = true;
         this.showEvent("💀 Game Over", "You caught too many endangered species!");
@@ -170,6 +173,7 @@ export default class MainScene extends Phaser.Scene {
         fish:           this.boat.fish,
         zoneStocks:      this.fishingZones.map(z => z.currentStock),
         endangeredCount: this.hud.endangeredCaught,
+        caughtCollection: this.hud.caughtCollection,
       });
 
       // Towing fee
@@ -214,6 +218,7 @@ export default class MainScene extends Phaser.Scene {
             fish:           this.boat.fish,
             zoneStocks:      this.fishingZones.map(z => z.currentStock),
             endangeredCount: this.hud.endangeredCaught,
+            caughtCollection: this.hud.caughtCollection,
           });
         }
       };
@@ -274,6 +279,7 @@ export default class MainScene extends Phaser.Scene {
               fish:           this.boat.fish,
               zoneStocks:      this.fishingZones.map(z => z.currentStock),
               endangeredCount: this.hud.endangeredCaught,
+              caughtCollection: this.hud.caughtCollection,
             });
             logChoice(currentUsername, "season_completed", {
               season:  this.seasonManager.season,

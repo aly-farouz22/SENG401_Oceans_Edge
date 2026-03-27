@@ -152,6 +152,8 @@ export default class HUD {
 
   // Endangered tracking
   get endangeredCaught() { return this.endangeredCount; }
+  get caughtCollection() { return [...this.caughtFishIds]; }
+  set caughtCollection(ids: string[]) { this.caughtFishIds = new Set(ids); }
   set endangeredCaught(value: number) {
     this.endangeredCount = value;
     const remaining = ENDANGERED_LIMIT - value;
