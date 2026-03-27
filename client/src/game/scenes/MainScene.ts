@@ -366,7 +366,7 @@ export default class MainScene extends Phaser.Scene {
     });
   }
 
-  // ── Helper: get season name from season number
+
   private getSeasonName(season: number): string {
     const SEASON_NAMES = ["Spring", "Summer", "Autumn", "Winter"];
     return SEASON_NAMES[(season - 1) % SEASON_NAMES.length];
@@ -514,20 +514,12 @@ export default class MainScene extends Phaser.Scene {
         strokeThickness: 3,
       }).setOrigin(0.5).setDepth(1001);
     }
-
-    const extinct = eco.fishPopulations
-      .filter(f => f.population <= 0)
-      .map(f => f.name)
-      .join(", ") || "None";
-
-    const stats = [
-      `Final Balance: $${econ.balance}`,
-      `Seasons Survived: ${this.seasonManager.season}`,
-      `Coral Health: ${Math.floor(eco.coralHealth)}%`,
-      `Pollution Level: ${Math.floor(eco.pollutionLevel)}%`,
-      `Extinct Species: ${extinct}`
-    ];
-
+  const stats = [
+    `Final Balance: $${econ.balance}`,
+    `Seasons Survived: ${this.seasonManager.season}`,
+    `Coral Health: ${Math.floor(eco.coralHealth)}%`,
+    `Pollution Level: ${Math.floor(eco.pollutionLevel)}%`
+  ];
     stats.forEach((line, i) => {
       this.add.text(cx, cy - 80 + i * 40, line, {
         fontSize: "22px",
