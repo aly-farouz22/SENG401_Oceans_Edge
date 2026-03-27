@@ -182,9 +182,7 @@ export default class MainScene extends Phaser.Scene {
         this.hud.caughtCollection = savedState.caughtCollection;
       }
       this.hud.onEndangeredLimit = () => {
-        this.hasGameEnded = true;
-        this.showEvent("💀 Game Over", "You caught too many endangered species!");
-        this.scene.pause();
+        this.showGameOverScreen("You caught too many endangered species!");
       };
 
       this.pauseMenu = new PauseMenu(this);
@@ -277,8 +275,7 @@ export default class MainScene extends Phaser.Scene {
           if (econState.balance < 0) {
             AchievementManager.instance.updateStats({ gameOverCount: 1 });
             this.hasGameEnded = true;
-            this.showEvent("💀 Game Over", "You couldn't cover your seasonal costs!");
-
+            this.showGameOverScreen("You couldn't cover your seasonal costs!");
             if (currentUsername) {
               const ecoState = this.ecosystem.getState();
               const extinct  = ecoState.fishPopulations
@@ -447,8 +444,7 @@ export default class MainScene extends Phaser.Scene {
           Math.floor(this.economy.getBalance()), this.seasonManager.season,
           ecoState.coralHealth, ecoState.pollutionLevel, extinct);
       }
-
-      this.showEvent("Game Over", "The ecosystem has collapsed.");
+  this.showGameOverScreen("Game Over, The ecosystem has collapsed.");
     }
   }
 
@@ -480,6 +476,98 @@ export default class MainScene extends Phaser.Scene {
           this.tweens.add({ targets: t, y: startY + i * spacing, duration: 200, ease: "Cubic.easeOut" });
         });
       },
+    });
+  }
+  showGameOverScreen(reason?: string) {
+    this.hasGameEnded = true;
+
+  this.physics.pause();
+  this.boat.setActive(false);
+  this.boat.setVisible(false);
+
+    const cam = this.cameras.main;
+    const cx = cam.width / 2;
+    const cy = cam.height / 2;
+
+    const econ = this.economy.getState();
+    const eco  = this.ecosystem.getState();
+
+    this.add.rectangle(cx, cy, cam.width, cam.height, 0x000000, 0.9)
+      .setDepth(1000);
+
+    this.add.text(cx, cy - 220, "GAME OVER", {
+      fontSize: "56px",
+      fontStyle: "bold",
+      color: "#ff4444",
+      fontFamily: "monospace",
+      stroke: "#000",
+      strokeThickness: 6,
+    }).setOrigin(0.5).setDepth(1001);
+
+    if (reason) {
+      this.add.text(cx, cy - 160, reason, {
+        fontSize: "28px",
+        fontStyle: "bold",
+        color: "#ffbb44",
+        fontFamily: "monospace",
+        stroke: "#000",
+        strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(1001);
+    }
+
+    const extinct = eco.fishPopulations
+      .filter(f => f.population <= 0)
+      .map(f => f.name)
+      .join(", ") || "None";
+
+    const stats = [
+      `Final Balance: $${econ.balance}`,
+      `Seasons Survived: ${this.seasonManager.season}`,
+      `Coral Health: ${Math.floor(eco.coralHealth)}%`,
+      `Pollution Level: ${Math.floor(eco.pollutionLevel)}%`,
+      `Extinct Species: ${extinct}`
+    ];
+
+    stats.forEach((line, i) => {
+      this.add.text(cx, cy - 80 + i * 40, line, {
+        fontSize: "22px",
+        color: "#ffeeaa",
+        fontFamily: "monospace",
+        stroke: "#000",
+        strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(1001);
+    });
+
+    const restart = this.add.text(cx, cy + 140, "Restart Game", {
+      fontSize: "26px",
+      color: "#44ff88",
+      fontFamily: "monospace",
+      backgroundColor: "#0a2a3a",
+      padding: { x: 30, y: 12 },
+    })
+    .setOrigin(0.5)
+    .setDepth(1001)
+    .setInteractive({ useHandCursor: true });
+
+    restart.on("pointerdown", () => {
+      this.hasGameEnded = false;
+      this.scene.restart();
+    });
+
+    const menu = this.add.text(cx, cy + 210, "Main Menu", {
+      fontSize: "26px",
+      color: "#ffaa44",
+      fontFamily: "monospace",
+      backgroundColor: "#0a2a3a",
+      padding: { x: 30, y: 12 },
+    })
+    .setOrigin(0.5)
+    .setDepth(1001)
+    .setInteractive({ useHandCursor: true });
+
+    menu.on("pointerdown", () => {
+      this.hasGameEnded = false;
+      this.scene.start("MenuScene");
     });
   }
 }
