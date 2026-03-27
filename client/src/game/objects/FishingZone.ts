@@ -50,10 +50,12 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
   private barY:        number;
   private _destroyed   = false;
   private pollutionLevel = 0;
+  private _zoneName = "";
 
   get isEmpty()  { return this.stock <= 0; }
   get currentStock() { return this.stock; }
   get isGone()   { return this._destroyed; }
+  get zoneName() { return this._zoneName; }
 
   constructor(
     scene: Phaser.Scene,
@@ -62,6 +64,7 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
     name = "Fishing Spot"
   ) {
     super(scene, x, y, width, height);
+    this._zoneName = name;
     scene.add.existing(this);
     scene.physics.add.existing(this, true);
 
