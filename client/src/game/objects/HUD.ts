@@ -4,7 +4,7 @@ import { FuelSystem } from "../systems/FuelSystem";
 import FishCollection from "./FishCollection";
 import { FishCatch } from "./FishingZone";
 
-const BAR_H             = 64;
+const BAR_H             = 100;
 const ENDANGERED_LIMIT  = 7;
 
 export default class HUD {
@@ -49,8 +49,8 @@ export default class HUD {
       .setDisplaySize(W, BAR_H)
       .setScrollFactor(0).setDepth(20);
 
-    const row1 = H - BAR_H + 10;
-    const row2 = H - BAR_H + 36;
+    const row1 = H - BAR_H + 50;
+    const row2 = H - BAR_H + 80;
 
     // ── Money ─────────────────────────────────────────────────────────────────
     this.moneyText = scene.add.text(12, row1, "💰 $0", {
@@ -94,10 +94,10 @@ export default class HUD {
       .setDisplaySize(SPRITE_W, SPRITE_H)
       .setScrollFactor(0).setDepth(21);
 
-    const barStartX  = 8 + 34 * SCALE;
+    const barStartX  = 8 + 30 * SCALE;
     const fuelBarW   = 64 * SCALE;
     const fuelBarH   = 20;
-    const barCenterY = spriteY + 2;
+    const barCenterY = spriteY + 4;
 
     this.fuelBarBg = scene.add.rectangle(
       barStartX + fuelBarW / 2, barCenterY, fuelBarW, fuelBarH, 0x1a0a00

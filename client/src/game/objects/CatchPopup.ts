@@ -36,7 +36,7 @@ const FISH_IMAGE_MAP: Record<string, string> = {
   "Cigarette Buds": "trash_cigarette",
 };
 
-const FISH_SCALE = 4;
+const FISH_SCALE = 3;
 
 export default class CatchPopup {
   private scene:     Phaser.Scene;
@@ -55,8 +55,8 @@ export default class CatchPopup {
     const H  = this.scene.cameras.main.height;
     const cx = W / 2;
     const cy = H / 2;
-    const PW = 560;
-    const PH = 700;
+    const PW = 340;
+    const PH = 420;
 
     const isTrash      = fish.rarity === "trash";
     const isEndangered = fish.endangered;
@@ -93,7 +93,7 @@ export default class CatchPopup {
     const imageKey = FISH_IMAGE_MAP[fish.name];
     let img: Phaser.GameObjects.Image | Phaser.GameObjects.Rectangle;
     if (imageKey && this.scene.textures.exists(imageKey)) {
-      img = this.scene.add.image(cx, cy - 60, imageKey)
+      img = this.scene.add.image(cx, cy - 30, imageKey)
         .setScrollFactor(0).setDepth(202)
         .setScale(FISH_SCALE);
       (img as Phaser.GameObjects.Image).texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
@@ -102,13 +102,13 @@ export default class CatchPopup {
         .setScrollFactor(0).setDepth(202);
     }
 
-    const nameText = this.scene.add.text(cx, cy + 190, fish.name, {
+    const nameText = this.scene.add.text(cx, cy + 100, fish.name, {
       fontSize: "28px", fontStyle: "bold",
       color: RARITY_COLORS[fish.rarity] ?? "#ffffff",
       fontFamily: "monospace", stroke: "#000", strokeThickness: 5,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
 
-    const rarityText = this.scene.add.text(cx, cy + 228, RARITY_LABELS[fish.rarity] ?? fish.rarity, {
+    const rarityText = this.scene.add.text(cx, cy + 132, RARITY_LABELS[fish.rarity] ?? fish.rarity, {
       fontSize: "16px", color: RARITY_COLORS[fish.rarity] ?? "#ffffff",
       fontFamily: "monospace", stroke: "#000", strokeThickness: 3,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
@@ -116,7 +116,7 @@ export default class CatchPopup {
     // ── Species warning tag ───────────────────────────────────────────────────
     let warningText: Phaser.GameObjects.Text | null = null;
     if (isEndangered) {
-      warningText = this.scene.add.text(cx, cy + 264,
+      warningText = this.scene.add.text(cx, cy + 162,
         "⚠  ENDANGERED  —  counted toward your catch limit!", {
         fontSize: "13px", fontStyle: "bold", color: "#ff4444",
         fontFamily: "monospace", stroke: "#000", strokeThickness: 2,

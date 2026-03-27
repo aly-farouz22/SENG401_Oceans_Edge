@@ -7,6 +7,13 @@ export interface Upgrade {
     effect: (boat: any) => void;
 }
 
+const UPGRADE_SCALE: Record<string, number> = {
+  "Stronger Net": 25,
+  "Engine Boost": 15,
+  "Eco Filter":   30,
+  "Larger Hold":  50,
+};
+
 export default class BoatUpgrade {
     private boat: any;
     private upgrades: Upgrade[] = [];
@@ -21,7 +28,7 @@ export default class BoatUpgrade {
             {
                 name: "Stronger Net",
                 description: "Increase Catch Rate by 20%",
-                cost: 5,
+                cost: 50,
                 level: 0,
                 levelMax: 3,
                 effect: (boat) => {
@@ -31,7 +38,7 @@ export default class BoatUpgrade {
             {
                 name: "Engine Boost",
                 description: "Increase Boat Speed by 15%",
-                cost: 10,
+                cost: 30,
                 level: 0,
                 levelMax: 3,
                 effect: (boat) => {
@@ -41,7 +48,7 @@ export default class BoatUpgrade {
             {
                 name: "Eco Filter",
                 description: "Reduce Chance Of Catching Juvenile/Endangered Fish",
-                cost: 15,
+                cost: 70,
                 level: 0,
                 levelMax: 2,
                 effect: (boat) => {
@@ -51,7 +58,7 @@ export default class BoatUpgrade {
             {
                 name: "Larger Hold",
                 description: "Expand inventory capacity by 5 slots",
-                cost: 20,
+                cost: 50,
                 level: 0,
                 levelMax: 4,
                 effect: (boat) => {
@@ -66,14 +73,16 @@ export default class BoatUpgrade {
         if (!upgrade) return false;
         if (upgrade.level >= upgrade.levelMax) return false;
 
+        const cost = upgrade.cost + upgrade.level * (UPGRADE_SCALE[upgrade.name] ?? 0);
+
         const economy = this.boat._m?.economy;
         if (economy) {
-            if (!economy.canAfford(upgrade.cost)) return false;
-            economy.getState().balance -= upgrade.cost;
-            economy.getState().totalExpenses += upgrade.cost;
+            if (!economy.canAfford(cost)) return false;
+            economy.getState().balance -= cost;
+            economy.getState().totalExpenses += cost;
         } else {
-            if (this.boat.money < upgrade.cost) return false;
-            this.boat.inventory._money -= upgrade.cost;
+            if (this.boat.money < cost) return false;
+            this.boat.inventory._money -= cost;
         }
 
         upgrade.level++;
@@ -87,7 +96,6 @@ export default class BoatUpgrade {
         return upgrade ? upgrade.level : 0;
     }
 
-    // Base capacity 10, +5 per Larger Hold level, max 30
     getInventoryCapacity(): number {
         return 10 + this.returnLevel("Larger Hold") * 5;
     }
@@ -96,9 +104,9 @@ export default class BoatUpgrade {
         return this.upgrades.map(u => ({
             name:        u.name,
             description: u.description,
-            cost:        u.cost,
+            cost:        u.cost + u.level * (UPGRADE_SCALE[u.name] ?? 0),
             level:       u.level,
-            maxLevel:    u.levelMax
+            maxLevel:    u.levelMax,
         }));
     }
 
@@ -106,14 +114,14 @@ export default class BoatUpgrade {
         const levels: Record<string, number> = {};
         this.upgrades.forEach(u => { levels[u.name] = u.level; });
         return levels;
-      }
-      
+    }
+
     restoreLevels(levels: Record<string, number>) {
         this.upgrades.forEach(u => {
-        if (levels[u.name] !== undefined) {
-            u.level = levels[u.name];
-            if (u.level > 0) u.effect(this.boat);
-        }
+            if (levels[u.name] !== undefined) {
+                u.level = levels[u.name];
+                if (u.level > 0) u.effect(this.boat);
+            }
         });
     }
 }

@@ -1,8 +1,7 @@
 import Phaser from "phaser";
+import { loadGame, saveGame } from "../../services/api";
 import BadgeGalleryScreen from "../achievements/BadgeGalleryScreen";
 import { currentUsername } from "../scenes/BootScene";
-import { saveGame, loadGame } from "../../services/api";
-import { AchievementManager } from "../achievements/AchievementManager";
 
 const PLAYER_ID = "player_1";
 
@@ -57,12 +56,12 @@ export default class PauseMenu {
       fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 3);
 
-    const btnResume = this.makeButton(cx, cy - 60,  "▶  Resume",        "#44ff88", DEPTH + 3);
-    const btnBadges = this.makeButton(cx, cy + 5,  "🏅  Badges",        "#ffcc44", DEPTH + 3);
-    const btnSave   = this.makeButton(cx, cy + 70,  "💾  Save Game",     "#66ccff", DEPTH + 3);
-    const btnLoad   = this.makeButton(cx, cy + 135, "📂  Load Game",   "#66ffcc", DEPTH + 3);
-    const btnExit   = this.makeButton(cx, cy + 200, "🏠  Exit to Menu",  "#ffaa44", DEPTH + 3);
-    const btnQuit   = this.makeButton(cx, cy + 265, "✖  Quit Game",      "#ff6666", DEPTH + 3);
+    const btnResume = this.makeButton(cx, cy - 120,  "▶  Resume",        "#44ff88", DEPTH + 3);
+    const btnBadges = this.makeButton(cx, cy - 55,  "🏅  Badges",        "#ffcc44", DEPTH + 3);
+    const btnSave   = this.makeButton(cx, cy + 10,  "💾  Save Game",     "#66ccff", DEPTH + 3);
+    const btnLoad   = this.makeButton(cx, cy + 75, "📂  Load Game",   "#66ffcc", DEPTH + 3);
+    const btnExit   = this.makeButton(cx, cy + 140, "🏠  Exit to Menu",  "#ffaa44", DEPTH + 3);
+    const btnQuit   = this.makeButton(cx, cy + 205, "✖  Quit Game",      "#ff6666", DEPTH + 3);
 
     // Resume
     btnResume.on("pointerdown", () => {

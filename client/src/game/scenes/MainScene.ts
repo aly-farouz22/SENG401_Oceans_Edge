@@ -106,10 +106,10 @@ export default class MainScene extends Phaser.Scene {
         if (typeof savedState.biodiversityIndex=== "number") this.ecosystem.getState().biodiversityIndex= savedState.biodiversityIndex;
       }
 
+      // Two initial zones, spread to opposite corners of the map
       this.fishingZones = [
-        new FishingZone(this, 150, 350, 100, 100, "Shallow Reef"),
-        new FishingZone(this, 400, 300, 120, 120, "Deep Waters"),
-        new FishingZone(this, 650, 250, 140, 140, "Coral Bed"),
+        new FishingZone(this, 150, 380, 120, 120, "Shallow Reef"),
+        new FishingZone(this, 700, 200, 120, 120, "Deep Waters"),
       ];
 
       this.marketZones = [
@@ -264,17 +264,21 @@ export default class MainScene extends Phaser.Scene {
         const econState = this.economy.getState();
         const season    = this.seasonManager.season;
 
+        const scaledFuelCost        = econState.fuelCost + (season - 1) * 5;
+        const scaledLicenseFee      = 20 + (season - 1) * 10;
+        const scaledMaintenanceCost = econState.maintenanceCost + (season - 1) * 10;
+        const totalCosts            = scaledFuelCost + scaledLicenseFee + scaledMaintenanceCost;
+
         const screen = new SeasonEndScreen(this);
         screen.show({
           earnings:        earned,
-          fuelCost:        econState.fuelCost,
-          licenseFee:      20,
-          maintenanceCost: econState.maintenanceCost,
+          fuelCost:        scaledFuelCost,
+          licenseFee:      scaledLicenseFee,
+          maintenanceCost: scaledMaintenanceCost,
           currentBalance:  econState.balance,
         });
 
         screen.onComplete = (canContinue) => {
-          const totalCosts = econState.fuelCost + 20 + econState.maintenanceCost;
           econState.balance += earned;
           econState.balance -= totalCosts;
 
@@ -304,8 +308,6 @@ export default class MainScene extends Phaser.Scene {
           }
 
           this.hud.showSellFeedback(earned, count);
-          this.economy.updateSeason();
-
 
           const event = this.eventSystem.triggerRandomEvent();
           if (event) this.showEvent(event.title, event.description);
@@ -315,8 +317,14 @@ export default class MainScene extends Phaser.Scene {
           this.seasonManager.advanceSeason();
           this.boat.fuelSystem.refuelFree();
 
+          // Spawn one new fishing zone every 2 seasons
+          const nextSeason = season + 1;
+          if (nextSeason % 2 === 0) {
+            this.spawnFishingZone();
+          }
+
           // Spawn extra trash zones each season
-          const extraTrash   = Math.min(Math.floor(this.seasonManager.season / 2), 3);
+          const extraTrash = Math.min(Math.floor(this.seasonManager.season / 2), 3);
           for (let t = 0; t < extraTrash; t++) {
             const tx = Phaser.Math.Between(80, this.cameras.main.width  - 80);
             const ty = Phaser.Math.Between(80, this.cameras.main.height - 150);
@@ -348,9 +356,7 @@ export default class MainScene extends Phaser.Scene {
             });
           }
 
-
           // Start next season objectives + show popup
-          const nextSeason = season + 1;
           this.objectives.startSeason(nextSeason);
           const popup = new SeasonObjectivePopup(this);
           popup.onClose = () => {};
@@ -380,17 +386,52 @@ export default class MainScene extends Phaser.Scene {
     });
   }
 
-
   private getSeasonName(season: number): string {
     const SEASON_NAMES = ["Spring", "Summer", "Autumn", "Winter"];
     return SEASON_NAMES[(season - 1) % SEASON_NAMES.length];
+  }
+
+  // Spawns a new fishing zone in a spread-out position, avoiding existing zones. //
+  private spawnFishingZone() {
+    const MAX_ZONES = 5; // This sets the maximum amount of fishing zones.
+    if (this.fishingZones.filter(z => !z.isGone).length >= MAX_ZONES) return;
+
+    const ZONE_NAMES = [
+      "Coral Bed", "Kelp Forest", "Rocky Shoals", "Open Sea",
+      "Tidal Flats", "Sunken Shelf", "Warm Current", "Northern Banks",
+    ];
+    const MIN_DIST = 250;
+    const MARGIN   = 100;
+    const W = this.cameras.main.width;
+    const H = this.cameras.main.height;
+
+    let x = 0, y = 0, attempts = 0;
+    do {
+      x = Phaser.Math.Between(MARGIN, W - MARGIN);
+      y = Phaser.Math.Between(MARGIN, H - MARGIN - 50);
+      attempts++;
+    } while (
+      attempts < 30 &&
+      this.fishingZones.filter(z => !z.isGone).some(z => {
+        const dx = z.x - x, dy = z.y - y;
+        return Math.sqrt(dx * dx + dy * dy) < MIN_DIST;
+      })
+    );
+
+    const name = ZONE_NAMES[Phaser.Math.Between(0, ZONE_NAMES.length - 1)];
+    const size = Phaser.Math.Between(100, 140);
+    const zone = new FishingZone(this, x, y, size, size, name);
+    this.fishingZones.push(zone);
+    this.boat.registerZones(this.fishingZones);
+    this.seasonManager.registerZones(this.fishingZones);
+
+    this.showEvent("🐟 New Fishing Zone!", `A new area has appeared: ${name}`);
   }
 
   private spawnTrashZone(x: number, y: number) {
     const zone = new TrashZone(this, x, y, 100, 100, this.ecosystem);
     this.trashZones.push(zone);
 
-    // Give the zone access to fishing zones so it can seep into nearest one
     zone.fishingZones = this.fishingZones;
 
     zone.onSeepStart = () => {
@@ -403,8 +444,6 @@ export default class MainScene extends Phaser.Scene {
     zone.onCleaned = () => {
       this.showEvent("Trash Cleaned! 🌊", "Pollution reduced and fish populations boosted.");
       this.trashZones = this.trashZones.filter(z => z !== zone);
-
-      // Objective: trash cleaned
       this.objectives.updateStats({ trashZonesCleaned: 1 });
 
       if (currentUsername) {
@@ -440,7 +479,6 @@ export default class MainScene extends Phaser.Scene {
       ecoState
     );
 
-    // Objective: ecosystem health 
     this.objectives.updateStats({ ecosystemHealth: ecoState.coralHealth });
 
     this.fishingZones
@@ -459,7 +497,7 @@ export default class MainScene extends Phaser.Scene {
           ecoState.coralHealth, ecoState.pollutionLevel, extinct);
           saveGame(currentUsername, { gameOver: true, gameOverReason: "The ecosystem has collapsed." });
       }
-  this.showGameOverScreen("Game Over, The ecosystem has collapsed.");
+      this.showGameOverScreen("Game Over, The ecosystem has collapsed.");
     }
   }
 
@@ -493,12 +531,13 @@ export default class MainScene extends Phaser.Scene {
       },
     });
   }
+
   showGameOverScreen(reason?: string) {
     this.hasGameEnded = true;
 
-  this.physics.pause();
-  this.boat.setActive(false);
-  this.boat.setVisible(false);
+    this.physics.pause();
+    this.boat.setActive(false);
+    this.boat.setVisible(false);
 
     const cam = this.cameras.main;
     const cx = cam.width / 2;
@@ -529,12 +568,13 @@ export default class MainScene extends Phaser.Scene {
         strokeThickness: 3,
       }).setOrigin(0.5).setDepth(1001);
     }
-  const stats = [
-    `Final Balance: $${econ.balance}`,
-    `Seasons Survived: ${this.seasonManager.season}`,
-    `Coral Health: ${Math.floor(eco.coralHealth)}%`,
-    `Pollution Level: ${Math.floor(eco.pollutionLevel)}%`
-  ];
+
+    const stats = [
+      `Final Balance: $${econ.balance}`,
+      `Seasons Survived: ${this.seasonManager.season}`,
+      `Coral Health: ${Math.floor(eco.coralHealth)}%`,
+      `Pollution Level: ${Math.floor(eco.pollutionLevel)}%`,
+    ];
     stats.forEach((line, i) => {
       this.add.text(cx, cy - 80 + i * 40, line, {
         fontSize: "22px",
@@ -544,23 +584,7 @@ export default class MainScene extends Phaser.Scene {
         strokeThickness: 3,
       }).setOrigin(0.5).setDepth(1001);
     });
-/* Restart button disabled — use Main Menu instead
-    const restart = this.add.text(cx, cy + 140, "Restart Game", {
-      fontSize: "26px",
-      color: "#44ff88",
-      fontFamily: "monospace",
-      backgroundColor: "#0a2a3a",
-      padding: { x: 30, y: 12 },
-    })
-    .setOrigin(0.5)
-    .setDepth(1001)
-    .setInteractive({ useHandCursor: true });
 
-    restart.on("pointerdown", () => {
-      this.hasGameEnded = false;
-      this.scene.restart();
-    });
-*/
     const menu = this.add.text(cx, cy + 210, "Main Menu", {
       fontSize: "26px",
       color: "#ffaa44",

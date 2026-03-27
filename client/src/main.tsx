@@ -1,11 +1,11 @@
 import Phaser from "phaser";
-import BootScene     from "./game/scenes/BootScene";
-import LoginScene    from "./game/scenes/LoginScene";
-import HomeScene     from "./game/scenes/HomeScene";
-import MenuScene     from "./game/scenes/MenuScene";
-import IntroScene    from "./game/scenes/IntroScene";
+import BootScene from "./game/scenes/BootScene";
+import HomeScene from "./game/scenes/HomeScene";
+import IntroScene from "./game/scenes/IntroScene";
+import LoginScene from "./game/scenes/LoginScene";
+import MainScene from "./game/scenes/MainScene";
+import MenuScene from "./game/scenes/MenuScene";
 import TutorialScene from "./game/scenes/TutorialScene";
-import MainScene     from "./game/scenes/MainScene";
 
 const config: Phaser.Types.Core.GameConfig = {
   type:            Phaser.AUTO,
@@ -22,6 +22,10 @@ const config: Phaser.Types.Core.GameConfig = {
     default: "arcade",
     arcade:  { gravity: { x: 0, y: 0 }, debug: false },
   },
+  render: {
+    pixelArt: true,
+    antialias: false,
+  },
   scene: [
     BootScene,
     LoginScene,
@@ -32,5 +36,4 @@ const config: Phaser.Types.Core.GameConfig = {
     MainScene,
   ],
 };
-
 new Phaser.Game(config);
