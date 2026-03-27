@@ -52,6 +52,7 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
   private pollutionLevel = 0;
 
   get isEmpty()  { return this.stock <= 0; }
+  get currentStock() { return this.stock; }
   get isGone()   { return this._destroyed; }
 
   constructor(

@@ -150,7 +150,16 @@ export default class HUD {
     scene.input.keyboard!.on("keydown-ESC", () => this.onMenuOpen?.());
   }
 
-  // ── Endangered tracking ───────────────────────────────────────────────────────
+  // Endangered tracking
+  get endangeredCaught() { return this.endangeredCount; }
+  set endangeredCaught(value: number) {
+    this.endangeredCount = value;
+    const remaining = ENDANGERED_LIMIT - value;
+    const color = remaining <= 2 ? "#ff4444" : remaining <= 4 ? "#ffaa44" : "#44ff88";
+    this.endangeredText
+      .setText(`🐠 Endangered: ${value}/${ENDANGERED_LIMIT}`)
+      .setColor(color);
+  }
 
   registerEndangeredCatch(): void {
     if (this.endangeredCount >= ENDANGERED_LIMIT) return;

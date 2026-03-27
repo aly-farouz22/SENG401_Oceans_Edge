@@ -136,10 +136,21 @@ export default class MainScene extends Phaser.Scene {
       if (savedState) {
         if (typeof savedState.fuel === "number") this.boat.fuelSystem.setFuel(savedState.fuel);
         if (Array.isArray(savedState.fish))      savedState.fish.forEach((f: any) => this.boat.inventory.addFish(f));
+        if (Array.isArray(savedState.zoneStocks)) {
+          savedState.zoneStocks.forEach((stock: number, i: number) => {
+            if (this.fishingZones[i]) {
+              this.fishingZones[i].stock = stock;
+              this.fishingZones[i].refreshBar();
+            }
+          });
+        }
       }
 
       this.hud = new HUD(this);
       this.hud.registerFuel(this.boat.fuelSystem);
+      if (savedState && typeof savedState.endangeredCount === "number") {
+        this.hud.endangeredCaught = savedState.endangeredCount;
+      }
       this.hud.onEndangeredLimit = () => {
         this.hasGameEnded = true;
         this.showEvent("💀 Game Over", "You caught too many endangered species!");
@@ -157,6 +168,8 @@ export default class MainScene extends Phaser.Scene {
         pollutionLevel: this.ecosystem.getState().pollutionLevel,
         fuel:           this.boat.fuelSystem.fuel,
         fish:           this.boat.fish,
+        zoneStocks:      this.fishingZones.map(z => z.currentStock),
+        endangeredCount: this.hud.endangeredCaught,
       });
 
       // Towing fee
@@ -199,6 +212,8 @@ export default class MainScene extends Phaser.Scene {
             pollutionLevel: this.ecosystem.getState().pollutionLevel,
             fuel:           this.boat.fuelSystem.fuel,
             fish:           this.boat.fish,
+            zoneStocks:      this.fishingZones.map(z => z.currentStock),
+            endangeredCount: this.hud.endangeredCaught,
           });
         }
       };
@@ -257,6 +272,8 @@ export default class MainScene extends Phaser.Scene {
               pollutionLevel: this.ecosystem.getState().pollutionLevel,
               fuel:           this.boat.fuelSystem.fuel,
               fish:           this.boat.fish,
+              zoneStocks:      this.fishingZones.map(z => z.currentStock),
+              endangeredCount: this.hud.endangeredCaught,
             });
             logChoice(currentUsername, "season_completed", {
               season:  this.seasonManager.season,
