@@ -208,7 +208,6 @@ export default class MainScene extends Phaser.Scene {
         this.hasGameEnded = true;
         if (currentUsername) saveGame(currentUsername, { gameOver: true, gameOverReason: "You caught too many endangered species!" });
         this.showGameOverScreen("You caught too many endangered species!");
-        this.scene.pause();
       };
 
       this.pauseMenu = new PauseMenu(this);
