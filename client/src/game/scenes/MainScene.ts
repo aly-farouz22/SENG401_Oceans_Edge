@@ -104,6 +104,18 @@ export default class MainScene extends Phaser.Scene {
         if (typeof savedState.pollutionLevel=== "number") this.ecosystem.getState().pollutionLevel   = savedState.pollutionLevel;
         if (typeof savedState.acidityLevel     === "number") this.ecosystem.getState().acidityLevel     = savedState.acidityLevel;
         if (typeof savedState.biodiversityIndex=== "number") this.ecosystem.getState().biodiversityIndex= savedState.biodiversityIndex;
+        if (typeof savedState.fuelCost        === "number") this.economy.getState().fuelCost         = savedState.fuelCost;
+        if (typeof savedState.maintenanceCost === "number") this.economy.getState().maintenanceCost  = savedState.maintenanceCost;
+        if (Array.isArray(savedState.fishPopulations)) {
+          savedState.fishPopulations.forEach((saved: any) => {
+            const fish = this.ecosystem.getState().fishPopulations.find(f => f.name === saved.name);
+            if (fish) {
+              fish.population       = saved.population;
+              fish.caughtThisSeason = saved.caughtThisSeason;
+              fish.regenerationRate = saved.regenerationRate;
+            }
+          });
+        }
       }
 
       this.fishingZones = [
@@ -207,6 +219,14 @@ export default class MainScene extends Phaser.Scene {
         caughtCollection: this.hud.caughtCollection,
         trashZones: this.trashZones.filter(z => !z.isGone).map(z => z.saveState),
         upgradeLevels: this.boat.upgrades.getLevels(),
+        fuelCost:        this.economy.getState().fuelCost,
+        maintenanceCost: this.economy.getState().maintenanceCost,
+        fishPopulations: this.ecosystem.getState().fishPopulations.map(f => ({
+          name:             f.name,
+          population:       f.population,
+          caughtThisSeason: f.caughtThisSeason,
+          regenerationRate: f.regenerationRate,
+        })),
       });
 
       // Towing fee
@@ -256,6 +276,14 @@ export default class MainScene extends Phaser.Scene {
             caughtCollection: this.hud.caughtCollection,
             trashZones: this.trashZones.filter(z => !z.isGone).map(z => z.saveState),
             upgradeLevels: this.boat.upgrades.getLevels(),
+            fuelCost:        this.economy.getState().fuelCost,
+            maintenanceCost: this.economy.getState().maintenanceCost,
+            fishPopulations: this.ecosystem.getState().fishPopulations.map(f => ({
+              name:             f.name,
+              population:       f.population,
+              caughtThisSeason: f.caughtThisSeason,
+              regenerationRate: f.regenerationRate,
+            })),
           });
         }
       };
@@ -341,6 +369,14 @@ export default class MainScene extends Phaser.Scene {
               caughtCollection: this.hud.caughtCollection,
               trashZones: this.trashZones.filter(z => !z.isGone).map(z => z.saveState),
               upgradeLevels: this.boat.upgrades.getLevels(),
+              fuelCost:        this.economy.getState().fuelCost,
+              maintenanceCost: this.economy.getState().maintenanceCost,
+              fishPopulations: this.ecosystem.getState().fishPopulations.map(f => ({
+                name:             f.name,
+                population:       f.population,
+                caughtThisSeason: f.caughtThisSeason,
+                regenerationRate: f.regenerationRate,
+              })),
             });
             logChoice(currentUsername, "season_completed", {
               season:  this.seasonManager.season,

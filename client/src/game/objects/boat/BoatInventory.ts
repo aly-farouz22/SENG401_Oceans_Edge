@@ -85,7 +85,6 @@ export default class BoatInventory {
         } else if (choice === "end_season") {
           this.onEndSeason?.(earned, count);
         }
-        this.atMarketLastFrame = false;
       };
     });
   }
