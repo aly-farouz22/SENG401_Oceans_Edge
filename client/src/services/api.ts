@@ -1,6 +1,6 @@
 // api.ts — all communication between the frontend and backend here
 
-const API_URL = "http://localhost:5000/api/game";
+const API_URL = "http://localhost:5001/api/game";
 
 // Saves the current game state to the database
 export const saveGame = async (username: string, state: object): Promise<void> => {
