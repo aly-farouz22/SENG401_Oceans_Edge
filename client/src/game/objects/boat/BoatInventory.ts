@@ -144,16 +144,12 @@ export default class BoatInventory {
     if (isAtMarket && !this.atMarketLastFrame) {
       const zone = this.marketZones[0];
       if (zone && !zone.menuOpen) {
-        this.scene.time.delayedCall(100, () => {
-          if (zone && !zone.menuOpen) zone.showMenu(this.fish);
-        });
+        zone.showMenu(this.fish);
       }
     }
 
     if (!isAtMarket && this.atMarketLastFrame) {
-      this.marketZones.forEach(z => {
-        if (!z.menuOpen) z.hideMenu();
-      });
+      this.marketZones.forEach(z => z.hideMenu());
     }
 
     this.atMarketLastFrame = isAtMarket;

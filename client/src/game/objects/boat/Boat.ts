@@ -50,6 +50,7 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
   private zoneOverlaps:      Map<FishingZone, number> = new Map();
   private trashZoneOverlaps: Map<TrashZone, number>   = new Map();
   private marketOverlaps = 0;
+  private marketOverlapFrames = 0;
 
   constructor(
     scene:     Phaser.Scene,
@@ -156,7 +157,11 @@ export default class Boat extends Phaser.Physics.Arcade.Sprite {
       if (count > 0 && !zone.isGone) { activeTrashZone = zone; break; }
     }
 
-    const isAtMarket = this.marketOverlaps > 0;
+    if (this.marketOverlaps > 0) {
+      this.marketOverlapFrames = 5;
+    }
+    const isAtMarket = this.marketOverlapFrames > 0;
+    this.marketOverlapFrames = Math.max(0, this.marketOverlapFrames - 1);
 
     for (const zone of this.zoneOverlaps.keys())      this.zoneOverlaps.set(zone, 0);
     for (const zone of this.trashZoneOverlaps.keys()) this.trashZoneOverlaps.set(zone, 0);
