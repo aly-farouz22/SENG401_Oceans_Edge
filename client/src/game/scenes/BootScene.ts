@@ -50,7 +50,7 @@ export default class BootScene extends Phaser.Scene {
     const cx = W / 2;
     const cy = H / 2;
 
-    // Background (clear, no dark overlay)
+    // Background 
     this.add.image(cx, cy, "boot_bg")
       .setDisplaySize(W, H)
       .setDepth(0);
@@ -65,7 +65,7 @@ export default class BootScene extends Phaser.Scene {
       strokeThickness: 6,
     }).setOrigin(0.5);
 
-    // Subtitle (your custom text)
+    // Subtitle
     this.add.text(cx, cy + 10, "SENG 401 Project – Group 3", {
       fontSize: "18px",
       color: "#ffffff",
@@ -99,7 +99,7 @@ export default class BootScene extends Phaser.Scene {
     // Smooth fade in
     this.cameras.main.fadeIn(500, 0, 0, 0);
 
-    // Subtle pulse animation (makes it feel alive)
+    // pulse animation
     this.tweens.add({
       targets: this.playButton,
       scaleX: 1.05,

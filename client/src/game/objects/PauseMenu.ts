@@ -81,8 +81,7 @@ export default class PauseMenu {
       gallery.show();
     });
 
-    // Save button — uses currentUsername and api.ts saveGame instead of
-    // the old hardcoded PLAYER_ID and non-existent /api/game/save endpoint
+    // Save button
     btnSave.on("pointerdown", async () => {
       if (!currentUsername) {
         saveStatus.setColor("#ff4444").setText("❌ No username set");
@@ -104,8 +103,7 @@ export default class PauseMenu {
       this.scene.time.delayedCall(2000, () => saveStatus.setText(""));
     });
 
-    // Load button — uses currentUsername and api.ts loadGame instead of
-    // the old hardcoded PLAYER_ID and non-existent /api/game/saves endpoint
+    // Load button
     btnLoad.on("pointerdown", async () => {
       if (!currentUsername) {
         saveStatus.setColor("#ff4444").setText("❌ No username set");
@@ -119,7 +117,6 @@ export default class PauseMenu {
         const saved = await loadGame(currentUsername);
         if (saved) {
           saveStatus.setColor("#44ff88").setText("✅ Save found!");
-          // Emit to MainScene so it can apply the saved state if wired up
           this.scene.events.emit("loadGameState", saved);
         } else {
           saveStatus.setColor("#ff4444").setText("❌ No saves found");
@@ -161,77 +158,6 @@ export default class PauseMenu {
       targets: all, alpha: 1, duration: 200, ease: "Cubic.easeOut",
     });
   }
-
-  // showLoadModal kept from original — commented out since it references
-  // the old /api/game/saves endpoint and non-existent save model.
-  // Can be re-enabled once a proper save history endpoint is added.
-  //
-  // private showLoadModal(saves: any[]) {
-  //   const scene = this.scene;
-  //   const W = scene.cameras.main.width;
-  //   const H = scene.cameras.main.height;
-  //   const cx = W / 2;
-  //   const cy = H / 2;
-  //   const DEPTH = 600;
-  //
-  //   const overlay = scene.add.rectangle(cx, cy, W, H, 0x000000, 0.8)
-  //     .setScrollFactor(0).setDepth(DEPTH)
-  //     .setInteractive({ useHandCursor: true });
-  //
-  //   const panel = scene.add.rectangle(cx, cy, 360, 400, 0x002233, 1)
-  //     .setScrollFactor(0).setDepth(DEPTH + 1);
-  //
-  //   const closeBtn = scene.add.text(cx, cy + 180, "✖ Close", {
-  //     fontSize: "16px", fontFamily: "monospace",
-  //     color: "#ff6666", backgroundColor: "#001a2e",
-  //     padding: { x: 20, y: 10 },
-  //   }).setOrigin(0.5).setDepth(DEPTH + 2)
-  //     .setInteractive({ useHandCursor: true });
-  //
-  //   closeBtn.on("pointerdown", () => {
-  //     overlay.destroy();
-  //     panel.destroy();
-  //     closeBtn.destroy();
-  //     listTexts.forEach(t => t.destroy());
-  //   });
-  //
-  //   const listTexts: Phaser.GameObjects.Text[] = [];
-  //   saves.forEach((save, i) => {
-  //     const t = scene.add.text(cx, cy - 160 + i * 40, `⏱ ${new Date(save.createdAt).toLocaleString()}`, {
-  //       fontSize: "14px", fontFamily: "monospace",
-  //       color: "#44ffcc", backgroundColor: "#001a2e",
-  //       padding: { x: 10, y: 6 }
-  //     }).setOrigin(0.5).setDepth(DEPTH + 2)
-  //       .setInteractive({ useHandCursor: true });
-  //
-  //     t.on("pointerdown", () => {
-  //       this.close();
-  //       fetch("/api/game/load/" + PLAYER_ID)
-  //         .then(res => res.json())
-  //         .then(data => {
-  //           if (this.getGameState) {
-  //             this.getGameState();
-  //             scene.events.emit("loadGameState", data);
-  //           }
-  //         });
-  //     });
-  //     listTexts.push(t);
-  //   });
-  // }
-
-  // applySave kept from original — commented out since it references
-  // undefined variables (player, boat). Can be re-enabled once
-  // MainScene exposes those via a proper interface.
-  //
-  // applySave(data: any) {
-  //   player.x = data.player.x;
-  //   player.y = data.player.y;
-  //   player.health = data.player.health;
-  //   boat.inventory = data.boat.inventory;
-  //   if (this.scene.scene.key !== data.scene) {
-  //     this.scene.scene.start(data.scene);
-  //   }
-  // }
 
   private makeButton(x: number, y: number, label: string, color: string, depth: number) {
     return this.scene.add.text(x, y, label, {

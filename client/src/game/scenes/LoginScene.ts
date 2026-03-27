@@ -18,17 +18,14 @@ export default class LoginScene extends Phaser.Scene {
     const cx = W / 2;
     const cy = H / 2;
 
-    // ── Background ─────────────────────────────────────────────────────────
     this.add.image(cx, cy, "boot_bg").setDisplaySize(W, H).setDepth(0);
-    // Dark overlay
     this.add.rectangle(cx, cy, W, H, 0x000d1a, 0.88).setDepth(1);
 
-    // ── Scanline effect (retro CRT feel) ──────────────────────────────────
     for (let y = 0; y < H; y += 4) {
       this.add.rectangle(cx, y, W, 1, 0x000000, 0.12).setDepth(2);
     }
 
-    // ── Pixel border frame ────────────────────────────────────────────────
+    // pixel border frame
     const bw = 460, bh = 380;
     const bx = cx - bw / 2, by = cy - bh / 2;
     // Outer border
@@ -178,8 +175,7 @@ export default class LoginScene extends Phaser.Scene {
 
     setCurrentUsername(this.usernameValue);
 
-    // Switch achievements to database storage for this specific player
-    // so badges are isolated per username instead of shared in localStorage
+    // Switch achievements to database storage for this specific player so badges are stored per player
     await AchievementManager.instance.switchToDbStorage(this.usernameValue);
 
     this.inputDom.destroy();

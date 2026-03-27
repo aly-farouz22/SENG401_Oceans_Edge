@@ -13,23 +13,16 @@ import { saveAchievements, loadAchievements } from "../../services/api";
 const STORAGE_KEY_UNLOCKED = "ach_unlocked";
 const STORAGE_KEY_STATS    = "ach_stats";
 
-// ── Interface ─────────────────────────────────────────────────────────────────
+// Interface
 
 export interface IAchievementStorage {
-  /** Return the set of already-unlocked achievement IDs */
   loadUnlocked(): Promise<Set<string>>;
-
-  /** Persist a newly unlocked achievement ID */
   unlock(achievementId: string): Promise<void>;
-
-  /** Return the persisted player stats */
   loadStats(): Promise<PlayerStats>;
-
-  /** Persist the full stats object */
   saveStats(stats: PlayerStats): Promise<void>;
 }
 
-// ── Local-storage implementation (used right now) ─────────────────────────────
+// Local-storage implementation
 
 export class LocalAchievementStorage implements IAchievementStorage {
   async loadUnlocked(): Promise<Set<string>> {
@@ -64,14 +57,12 @@ export class LocalAchievementStorage implements IAchievementStorage {
   }
 }
 
-// ── Database-backed implementation ────────────────────────────────────────────
+// Database-backed implementation:
 // Stores achievements per-player in Supabase so each username has
 // their own badges instead of sharing a single localStorage entry.
-// Pass a username and this replaces LocalAchievementStorage entirely.
 
 export class DbAchievementStorage implements IAchievementStorage {
   private username:    string;
-  // Local cache so we don't hit the database on every unlock/save
   private unlocked:   Set<string>  = new Set();
   private stats:      PlayerStats  = { ...DEFAULT_STATS };
   private loaded      = false;
@@ -116,39 +107,3 @@ export class DbAchievementStorage implements IAchievementStorage {
     await saveAchievements(this.username, [...this.unlocked], this.stats);
   }
 }
-
-// ── Stub for future backend (kept from original) ──────────────────────────────
-// When you're ready, replace this with real fetch() calls and pass it
-// into AchievementManager instead of LocalAchievementStorage.
-//
-// export class ApiAchievementStorage implements IAchievementStorage {
-//   constructor(private userId: string, private baseUrl: string) {}
-//
-//   async loadUnlocked(): Promise<Set<string>> {
-//     const res  = await fetch(`${this.baseUrl}/api/achievements/${this.userId}`);
-//     const data = await res.json();          // { unlockedIds: string[] }
-//     return new Set(data.unlockedIds);
-//   }
-//
-//   async unlock(achievementId: string): Promise<void> {
-//     await fetch(`${this.baseUrl}/api/achievements/${this.userId}/unlock`, {
-//       method: "POST",
-//       headers: { "Content-Type": "application/json" },
-//       body: JSON.stringify({ achievementId }),
-//     });
-//   }
-//
-//   async loadStats(): Promise<PlayerStats> {
-//     const res  = await fetch(`${this.baseUrl}/api/stats/${this.userId}`);
-//     const data = await res.json();
-//     return { ...DEFAULT_STATS, ...data };
-//   }
-//
-//   async saveStats(stats: PlayerStats): Promise<void> {
-//     await fetch(`${this.baseUrl}/api/stats/${this.userId}`, {
-//       method: "PUT",
-//       headers: { "Content-Type": "application/json" },
-//       body: JSON.stringify(stats),
-//     });
-//   }
-// }

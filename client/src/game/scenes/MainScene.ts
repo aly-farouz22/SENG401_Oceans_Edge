@@ -67,7 +67,6 @@ export default class MainScene extends Phaser.Scene {
     this.hasGameEnded = false;
 
     // Read saved state passed from MenuScene when player clicks Load Game.
-    // MenuScene passes { savedGame: saved } so we read savedGame.state
     const sceneData  = this.scene.settings.data as any;
     const savedState = sceneData?.savedGame?.state ?? null;
 
@@ -82,7 +81,6 @@ export default class MainScene extends Phaser.Scene {
         .setScrollFactor(0)
         .setDepth(0);
 
-      // ── Compass (bottom-left, decorative) ──────────────────────────────────
       this.add.image(110, cam.height - 150, "compass")
         .setDisplaySize(200, 200)
         .setScrollFactor(0)
@@ -99,9 +97,7 @@ export default class MainScene extends Phaser.Scene {
 
       this.economy.addRevenue(0);
 
-      // ── Apply saved economy and ecosystem state ───────────────────────────
-      // Restores money, coral health and pollution from the database.
-      // Runs after systems are initialized so we can safely set values.
+      // Apply saved economy and ecosystem state
       if (savedState) {
         if (typeof savedState.money         === "number") this.economy.getState().balance            = savedState.money;
         if (typeof savedState.coralHealth   === "number") this.ecosystem.getState().coralHealth      = savedState.coralHealth;
@@ -135,7 +131,7 @@ export default class MainScene extends Phaser.Scene {
       this.marketZones.forEach(z => z.registerUpgrades(this.boat.upgrades));
       this.marketZones.forEach(z => z.registerFuel(this.boat.fuelSystem, this.economy));
 
-      // ── Restore fuel and fish inventory after boat is created ─────────────
+      // Restore fuel and fish inventory after boat is created
       // Must run after new Boat() so fuelSystem and inventory exist.
       if (savedState) {
         if (typeof savedState.fuel === "number") this.boat.fuelSystem.setFuel(savedState.fuel);
@@ -163,7 +159,7 @@ export default class MainScene extends Phaser.Scene {
         fish:           this.boat.fish,
       });
 
-      // ── Towing fee ────────────────────────────────────────────────────────
+      // Towing fee
       this.boat.boatMovement.onFuelEmpty = () => {
         const TOWING_FEE = 300;
         this.economy.getState().balance       -= TOWING_FEE;
@@ -174,8 +170,7 @@ export default class MainScene extends Phaser.Scene {
           `You ran out of fuel and were towed back for $${TOWING_FEE}!`);
       };
 
-      // ── Collection tracking ───────────────────────────────────────────────
-      // Register each non-trash catch with the HUD collection
+      // Collection tracking
       const origOnCatch = this.boat.fishing.onCatch;
       this.boat.fishing.onCatch = (fish) => {
         origOnCatch?.(fish);
@@ -193,7 +188,6 @@ export default class MainScene extends Phaser.Scene {
 
       this.boat.onSell = (earned, count) => {
         AchievementManager.instance.updateStats({ lifetimeEarnings: earned });
-        // ── Objective: money earned ──────────────────────────────────────
         this.objectives.updateStats({ moneyEarned: earned });
         this.hud.showSellFeedback(earned, count);
 
@@ -244,7 +238,7 @@ export default class MainScene extends Phaser.Scene {
             return;
           }
 
-          // ── Evaluate season objectives ─────────────────────────────────
+          // Evaluate season objectives
           this.objectives.evaluateSeason(canContinue);
 
           AchievementManager.instance.updateStats({ seasonsCompleted: 1 });
@@ -278,7 +272,7 @@ export default class MainScene extends Phaser.Scene {
           this.seasonManager.advanceSeason();
           this.boat.fuelSystem.refuelFree();
 
-          // ── Spawn extra trash zones each season ────────────────────────────
+          // Spawn extra trash zones each season
           const extraTrash   = Math.min(Math.floor(this.seasonManager.season / 2), 3);
           for (let t = 0; t < extraTrash; t++) {
             const tx = Phaser.Math.Between(80, this.cameras.main.width  - 80);
@@ -289,7 +283,7 @@ export default class MainScene extends Phaser.Scene {
             totalTrashZones: 3 + this.trashZones.length,
           });
 
-          // ── Start next season objectives + show popup ──────────────────
+          // Start next season objectives + show popup
           const nextSeason = season + 1;
           this.objectives.startSeason(nextSeason);
           const popup = new SeasonObjectivePopup(this);
@@ -302,7 +296,6 @@ export default class MainScene extends Phaser.Scene {
         this.hud.showSeasonBanner(season, seasonName);
       };
 
-      // Start objectives for current season (saved or 1)
       const startSeason = savedState?.season ?? 1;
       this.objectives.startSeason(startSeason);
 
@@ -313,12 +306,11 @@ export default class MainScene extends Phaser.Scene {
         const introPopup = new SeasonObjectivePopup(this);
         introPopup.onClose = () => { this.sceneReady = true; };
         introPopup.show(this.objectives, startSeason);
-        // sceneReady is set true inside introPopup.onClose
       }
     });
   }
 
-  // ── Helper: get season name from season number ────────────────────────────
+  // ── Helper: get season name from season number
   private getSeasonName(season: number): string {
     const SEASON_NAMES = ["Spring", "Summer", "Autumn", "Winter"];
     return SEASON_NAMES[(season - 1) % SEASON_NAMES.length];
@@ -342,7 +334,7 @@ export default class MainScene extends Phaser.Scene {
       this.showEvent("Trash Cleaned! 🌊", "Pollution reduced and fish populations boosted.");
       this.trashZones = this.trashZones.filter(z => z !== zone);
 
-      // ── Objective: trash cleaned ─────────────────────────────────────
+      // Objective: trash cleaned
       this.objectives.updateStats({ trashZonesCleaned: 1 });
 
       if (currentUsername) {
@@ -378,7 +370,7 @@ export default class MainScene extends Phaser.Scene {
       ecoState
     );
 
-    // ── Objective: ecosystem health (update each frame) ─────────────────
+    // Objective: ecosystem health 
     this.objectives.updateStats({ ecosystemHealth: ecoState.coralHealth });
 
     this.fishingZones

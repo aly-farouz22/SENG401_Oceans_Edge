@@ -1,5 +1,4 @@
-// api.ts — all communication between the frontend and backend lives here.
-// These functions are the only place that knows about the backend URL.
+// api.ts — all communication between the frontend and backend here
 
 const API_URL = "http://localhost:5000/api/game";
 
@@ -76,8 +75,6 @@ export const loadAchievements = async (username: string): Promise<{
 };
 
 // Logs a player decision to the database.
-// decision examples: "caught_endangered", "cleaned_trash", "bought_upgrade", "species_extinct"
-// details is optional extra context e.g. { fishName: "Bluefin Tuna", season: 2 }
 export const logChoice = async (
   username: string,
   decision: string,
