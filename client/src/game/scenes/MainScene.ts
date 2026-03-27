@@ -544,7 +544,7 @@ export default class MainScene extends Phaser.Scene {
         strokeThickness: 3,
       }).setOrigin(0.5).setDepth(1001);
     });
-
+/* Restart button disabled — use Main Menu instead
     const restart = this.add.text(cx, cy + 140, "Restart Game", {
       fontSize: "26px",
       color: "#44ff88",
@@ -556,14 +556,11 @@ export default class MainScene extends Phaser.Scene {
     .setDepth(1001)
     .setInteractive({ useHandCursor: true });
 
-    restart.on("pointerdown", async () => {
+    restart.on("pointerdown", () => {
       this.hasGameEnded = false;
-      if (currentUsername) {
-        await saveGame(currentUsername, {});
-      }
       this.scene.restart();
     });
-
+*/
     const menu = this.add.text(cx, cy + 210, "Main Menu", {
       fontSize: "26px",
       color: "#ffaa44",
@@ -575,8 +572,11 @@ export default class MainScene extends Phaser.Scene {
     .setDepth(1001)
     .setInteractive({ useHandCursor: true });
 
-    menu.on("pointerdown", () => {
+    menu.on("pointerdown", async () => {
       this.hasGameEnded = false;
+      if (currentUsername) {
+        await saveGame(currentUsername, {});
+      }
       window.location.reload();
     });
   }
