@@ -136,6 +136,7 @@ export default class MainScene extends Phaser.Scene {
       // Restore fuel and fish inventory after boat is created
       // Must run after new Boat() so fuelSystem and inventory exist.
       if (savedState) {
+        if (savedState.upgradeLevels) this.boat.upgrades.restoreLevels(savedState.upgradeLevels);
         if (typeof savedState.fuel === "number") this.boat.fuelSystem.setFuel(savedState.fuel);
         if (Array.isArray(savedState.fish))      savedState.fish.forEach((f: any) => this.boat.inventory.addFish(f));
         if (Array.isArray(savedState.zoneStocks)) {
@@ -182,7 +183,10 @@ export default class MainScene extends Phaser.Scene {
         this.hud.caughtCollection = savedState.caughtCollection;
       }
       this.hud.onEndangeredLimit = () => {
+        this.hasGameEnded = true;
+        if (currentUsername) saveGame(currentUsername, { gameOver: true, gameOverReason: "You caught too many endangered species!" });
         this.showGameOverScreen("You caught too many endangered species!");
+        this.scene.pause();
       };
 
       this.pauseMenu = new PauseMenu(this);
@@ -202,6 +206,7 @@ export default class MainScene extends Phaser.Scene {
         endangeredCount: this.hud.endangeredCaught,
         caughtCollection: this.hud.caughtCollection,
         trashZones: this.trashZones.filter(z => !z.isGone).map(z => z.saveState),
+        upgradeLevels: this.boat.upgrades.getLevels(),
       });
 
       // Towing fee
@@ -250,6 +255,7 @@ export default class MainScene extends Phaser.Scene {
             endangeredCount: this.hud.endangeredCaught,
             caughtCollection: this.hud.caughtCollection,
             trashZones: this.trashZones.filter(z => !z.isGone).map(z => z.saveState),
+            upgradeLevels: this.boat.upgrades.getLevels(),
           });
         }
       };
@@ -283,6 +289,7 @@ export default class MainScene extends Phaser.Scene {
               saveOutcome(currentUsername, "bankrupt",
                 Math.floor(econState.balance), season,
                 ecoState.coralHealth, ecoState.pollutionLevel, extinct);
+                saveGame(currentUsername, { gameOver: true, gameOverReason: "You couldn't cover your seasonal costs!" });
             }
             this.scene.pause();
             return;
@@ -299,26 +306,6 @@ export default class MainScene extends Phaser.Scene {
           this.hud.showSellFeedback(earned, count);
           this.economy.updateSeason();
 
-          if (currentUsername) {
-            saveGame(currentUsername, {
-              money:          econState.balance,
-              season:         this.seasonManager.season,
-              coralHealth:    this.ecosystem.getState().coralHealth,
-              pollutionLevel: this.ecosystem.getState().pollutionLevel,
-              acidityLevel:      this.ecosystem.getState().acidityLevel,
-              biodiversityIndex: this.ecosystem.getState().biodiversityIndex,
-              fuel:           this.boat.fuelSystem.fuel,
-              fish:           this.boat.fish,
-              zoneStocks:      this.fishingZones.map(z => z.currentStock),
-              endangeredCount: this.hud.endangeredCaught,
-              caughtCollection: this.hud.caughtCollection,
-              trashZones: this.trashZones.filter(z => !z.isGone).map(z => z.saveState),
-            });
-            logChoice(currentUsername, "season_completed", {
-              season:  this.seasonManager.season,
-              balance: econState.balance,
-            });
-          }
 
           const event = this.eventSystem.triggerRandomEvent();
           if (event) this.showEvent(event.title, event.description);
@@ -339,6 +326,29 @@ export default class MainScene extends Phaser.Scene {
             totalTrashZones: 3 + this.trashZones.length,
           });
 
+          if (currentUsername) {
+            saveGame(currentUsername, {
+              money:          this.economy.getBalance(),
+              season:         this.seasonManager.season,
+              coralHealth:    this.ecosystem.getState().coralHealth,
+              pollutionLevel: this.ecosystem.getState().pollutionLevel,
+              acidityLevel:      this.ecosystem.getState().acidityLevel,
+              biodiversityIndex: this.ecosystem.getState().biodiversityIndex,
+              fuel:           this.boat.fuelSystem.fuel,
+              fish:           this.boat.fish,
+              zoneStocks:      this.fishingZones.map(z => z.currentStock),
+              endangeredCount: this.hud.endangeredCaught,
+              caughtCollection: this.hud.caughtCollection,
+              trashZones: this.trashZones.filter(z => !z.isGone).map(z => z.saveState),
+              upgradeLevels: this.boat.upgrades.getLevels(),
+            });
+            logChoice(currentUsername, "season_completed", {
+              season:  this.seasonManager.season,
+              balance: econState.balance,
+            });
+          }
+
+
           // Start next season objectives + show popup
           const nextSeason = season + 1;
           this.objectives.startSeason(nextSeason);
@@ -357,6 +367,10 @@ export default class MainScene extends Phaser.Scene {
 
       // Only show the intro popup for new games, skip it when loading a save
       if (savedState) {
+        if (savedState.gameOver) {
+          this.showGameOverScreen(savedState.gameOverReason);
+          return;
+        }
         this.sceneReady = true;
       } else {
         const introPopup = new SeasonObjectivePopup(this);
@@ -443,6 +457,7 @@ export default class MainScene extends Phaser.Scene {
         saveOutcome(currentUsername, "ecosystem_collapse",
           Math.floor(this.economy.getBalance()), this.seasonManager.season,
           ecoState.coralHealth, ecoState.pollutionLevel, extinct);
+          saveGame(currentUsername, { gameOver: true, gameOverReason: "The ecosystem has collapsed." });
       }
   this.showGameOverScreen("Game Over, The ecosystem has collapsed.");
     }
@@ -541,8 +556,11 @@ export default class MainScene extends Phaser.Scene {
     .setDepth(1001)
     .setInteractive({ useHandCursor: true });
 
-    restart.on("pointerdown", () => {
+    restart.on("pointerdown", async () => {
       this.hasGameEnded = false;
+      if (currentUsername) {
+        await saveGame(currentUsername, {});
+      }
       this.scene.restart();
     });
 
@@ -559,7 +577,7 @@ export default class MainScene extends Phaser.Scene {
 
     menu.on("pointerdown", () => {
       this.hasGameEnded = false;
-      this.scene.start("MenuScene");
+      window.location.reload();
     });
   }
 }

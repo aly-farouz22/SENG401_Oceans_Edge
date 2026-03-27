@@ -101,4 +101,19 @@ export default class BoatUpgrade {
             maxLevel:    u.levelMax
         }));
     }
+
+    getLevels(): Record<string, number> {
+        const levels: Record<string, number> = {};
+        this.upgrades.forEach(u => { levels[u.name] = u.level; });
+        return levels;
+      }
+      
+    restoreLevels(levels: Record<string, number>) {
+        this.upgrades.forEach(u => {
+        if (levels[u.name] !== undefined) {
+            u.level = levels[u.name];
+            if (u.level > 0) u.effect(this.boat);
+        }
+        });
+    }
 }
