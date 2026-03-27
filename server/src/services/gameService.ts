@@ -1,6 +1,6 @@
 import { prisma } from "../db";
 
-// ── Helper: get or create a player by username ────────────────────────────
+// helper to get or create player by username
 const getOrCreatePlayer = async (username: string) => {
   return prisma.player.upsert({
     where:  { username },
@@ -9,7 +9,7 @@ const getOrCreatePlayer = async (username: string) => {
   });
 };
 
-// ── Save / load game state ────────────────────────────────────────────────
+// save and load game state
 
 export const saveGameState = async (data: { username: string; state: object }) => {
   const player = await getOrCreatePlayer(data.username);
@@ -29,16 +29,13 @@ export const loadGameState = async (username: string) => {
   return player?.gameState ?? null;
 };
 
-// ── Check if a player already exists ─────────────────────────────────────
-// Used by BootScene to decide whether to show "Continue" or start fresh.
+// Check if a player already exists
 export const playerExists = async (username: string): Promise<boolean> => {
   const player = await prisma.player.findUnique({ where: { username } });
   return player !== null;
 };
 
-// ── Save achievements for a player ───────────────────────────────────────
-// Stores unlocked badge IDs and player stats in the GameState row
-// so each player has their own badges instead of sharing localStorage.
+// Save achievements for a player
 export const saveAchievements = async (data: {
   username:     string;
   unlockedIds:  string[];
@@ -58,8 +55,7 @@ export const saveAchievements = async (data: {
   });
 };
 
-// ── Load achievements for a player ───────────────────────────────────────
-// Returns the stored unlocked IDs and stats, or null if none saved yet.
+// Load achievements for a player
 export const loadAchievements = async (username: string): Promise<{
   unlockedIds: string[];
   stats:       object;
@@ -78,7 +74,7 @@ export const loadAchievements = async (username: string): Promise<{
   };
 };
 
-// ── Log a player choice ───────────────────────────────────────────────────
+// Log a player choice
 export const logChoice = async (data: {
   username: string;
   decision: string;
@@ -95,7 +91,7 @@ export const logChoice = async (data: {
   });
 };
 
-// ── Save a game outcome ───────────────────────────────────────────────────
+// Save a game outcome
 export const saveOutcome = async (data: {
   username:       string;
   result:         string;

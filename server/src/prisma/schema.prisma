@@ -19,9 +19,7 @@ model Player {
   outcomes    GameOutcome[]
 }
 
-// Stores the full game state for a player as a JSON blob.
-// Now also includes achievements so badges are per-player
-// instead of being stored globally in localStorage.
+// Stores the full game state for a player as a JSON file
 model GameState {
   id           String   @id @default(cuid())
   playerId     String   @unique

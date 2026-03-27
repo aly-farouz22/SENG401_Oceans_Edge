@@ -37,8 +37,7 @@ export const recordOutcome = async (req: Request, res: Response) => {
   res.json(result);
 };
 
-// Checks if a username already has a saved game — used by BootScene
-// to decide whether to show "Continue" or start fresh
+// Checks if a username already has a saved game
 export const checkPlayer = async (req: Request<{ username: string }>, res: Response) => {
   const { username } = req.params;
   const exists = await playerExists(username);
