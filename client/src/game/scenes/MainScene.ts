@@ -102,6 +102,8 @@ export default class MainScene extends Phaser.Scene {
         if (typeof savedState.money         === "number") this.economy.getState().balance            = savedState.money;
         if (typeof savedState.coralHealth   === "number") this.ecosystem.getState().coralHealth      = savedState.coralHealth;
         if (typeof savedState.pollutionLevel=== "number") this.ecosystem.getState().pollutionLevel   = savedState.pollutionLevel;
+        if (typeof savedState.acidityLevel     === "number") this.ecosystem.getState().acidityLevel     = savedState.acidityLevel;
+        if (typeof savedState.biodiversityIndex=== "number") this.ecosystem.getState().biodiversityIndex= savedState.biodiversityIndex;
       }
 
       this.fishingZones = [
@@ -194,6 +196,8 @@ export default class MainScene extends Phaser.Scene {
         season:         this.seasonManager.season,
         coralHealth:    this.ecosystem.getState().coralHealth,
         pollutionLevel: this.ecosystem.getState().pollutionLevel,
+        acidityLevel:      this.ecosystem.getState().acidityLevel,
+        biodiversityIndex: this.ecosystem.getState().biodiversityIndex,
         fuel:           this.boat.fuelSystem.fuel,
         fish:           this.boat.fish,
         zoneStocks:      this.fishingZones.map(z => z.currentStock),
@@ -240,6 +244,8 @@ export default class MainScene extends Phaser.Scene {
             season:         this.seasonManager.season,
             coralHealth:    this.ecosystem.getState().coralHealth,
             pollutionLevel: this.ecosystem.getState().pollutionLevel,
+            acidityLevel:      this.ecosystem.getState().acidityLevel,
+            biodiversityIndex: this.ecosystem.getState().biodiversityIndex,
             fuel:           this.boat.fuelSystem.fuel,
             fish:           this.boat.fish,
             zoneStocks:      this.fishingZones.map(z => z.currentStock),
@@ -302,6 +308,8 @@ export default class MainScene extends Phaser.Scene {
               season:         this.seasonManager.season,
               coralHealth:    this.ecosystem.getState().coralHealth,
               pollutionLevel: this.ecosystem.getState().pollutionLevel,
+              acidityLevel:      this.ecosystem.getState().acidityLevel,
+              biodiversityIndex: this.ecosystem.getState().biodiversityIndex,
               fuel:           this.boat.fuelSystem.fuel,
               fish:           this.boat.fish,
               zoneStocks:      this.fishingZones.map(z => z.currentStock),
