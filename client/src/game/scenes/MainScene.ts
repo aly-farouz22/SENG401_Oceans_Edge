@@ -159,6 +159,16 @@ export default class MainScene extends Phaser.Scene {
             }
           });
         }
+        if (Array.isArray(savedState.spawnedZones)) {
+          savedState.spawnedZones.forEach((sz: any) => {
+            const zone = new FishingZone(this, sz.x, sz.y, sz.size, sz.size, sz.name);
+            this.fishingZones.push(zone);
+            zone.stock = sz.stock;
+            zone.refreshBar();
+          });
+          this.boat.registerZones(this.fishingZones);
+          this.seasonManager.registerZones(this.fishingZones);
+        }
         if (Array.isArray(savedState.trashZones)) {
           savedState.trashZones.forEach((tz: any) => {
             const zone = new TrashZone(this, tz.x, tz.y, 100, 100, this.ecosystem);
@@ -215,6 +225,13 @@ export default class MainScene extends Phaser.Scene {
         fuel:           this.boat.fuelSystem.fuel,
         fish:           this.boat.fish,
         zoneStocks:      this.fishingZones.map(z => z.currentStock),
+        spawnedZones:   this.fishingZones.slice(2).filter(z => !z.isGone).map(z => ({
+          x:     z.x,
+          y:     z.y,
+          size:  z.width,
+          name:  z.name,
+          stock: z.currentStock,
+        })),
         endangeredCount: this.hud.endangeredCaught,
         caughtCollection: this.hud.caughtCollection,
         trashZones: this.trashZones.filter(z => !z.isGone).map(z => z.saveState),
@@ -272,6 +289,13 @@ export default class MainScene extends Phaser.Scene {
             fuel:           this.boat.fuelSystem.fuel,
             fish:           this.boat.fish,
             zoneStocks:      this.fishingZones.map(z => z.currentStock),
+            spawnedZones:  this.fishingZones.slice(2).filter(z => !z.isGone).map(z => ({
+              x:     z.x,
+              y:     z.y,
+              size:  z.width,
+              name:  z.name,
+              stock: z.currentStock,
+            })),
             endangeredCount: this.hud.endangeredCaught,
             caughtCollection: this.hud.caughtCollection,
             trashZones: this.trashZones.filter(z => !z.isGone).map(z => z.saveState),
@@ -373,6 +397,13 @@ export default class MainScene extends Phaser.Scene {
               fuel:           this.boat.fuelSystem.fuel,
               fish:           this.boat.fish,
               zoneStocks:      this.fishingZones.map(z => z.currentStock),
+              spawnedZones:  this.fishingZones.slice(2).filter(z => !z.isGone).map(z => ({
+                x:     z.x,
+                y:     z.y,
+                size:  z.width,
+                name:  z.name,
+                stock: z.currentStock,
+              })),
               endangeredCount: this.hud.endangeredCaught,
               caughtCollection: this.hud.caughtCollection,
               trashZones: this.trashZones.filter(z => !z.isGone).map(z => z.saveState),
