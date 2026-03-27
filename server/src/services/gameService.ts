@@ -26,7 +26,7 @@ export const loadGameState = async (username: string) => {
     where:   { username },
     include: { gameState: true },
   });
-  return player?.gameState ?? null;
+  return player?.gameState?.state ?? null;
 };
 
 // Check if a player already exists

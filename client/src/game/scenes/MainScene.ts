@@ -68,7 +68,7 @@ export default class MainScene extends Phaser.Scene {
 
     // Read saved state passed from MenuScene when player clicks Load Game.
     const sceneData  = this.scene.settings.data as any;
-    const savedState = sceneData?.savedGame?.state ?? null;
+    const savedState = sceneData?.savedGame ?? null;
 
     AchievementManager.instance.init().then(() => {
       const cam = this.cameras.main;
