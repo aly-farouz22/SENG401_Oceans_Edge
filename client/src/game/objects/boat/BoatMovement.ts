@@ -69,8 +69,10 @@ export default class BoatMovement {
     // this will clamp the boat to the screen's boundary
     const cam    = this.sprite.scene.cameras.main;
     const margin = 20; 
+    const hudHeight = 80; // matches BAR_H in HUD.ts
     this.sprite.x = Phaser.Math.Clamp(this.sprite.x, margin, cam.width  - margin);
-    this.sprite.y = Phaser.Math.Clamp(this.sprite.y, margin, cam.height - margin);
+    this.sprite.y = Phaser.Math.Clamp(this.sprite.y, margin, cam.height - hudHeight - margin);
+
     
   }
 }
