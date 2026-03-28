@@ -31,7 +31,7 @@ npm install
 npm run dev
 ```
 
-## Setup and Run Client
+## 3. Setup and Run Client
 
 ```bash
 cd client
