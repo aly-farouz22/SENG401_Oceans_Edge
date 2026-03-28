@@ -213,7 +213,7 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
       const maxed    = u.level >= u.maxLevel;
       const labelStr = `${u.name}  [${u.level}/${u.maxLevel}]\n${u.description}\nCost: $${u.cost}`;
 
-      const infoText = this.scene.add.text(cx - 80, rowY, labelStr, {
+      const infoText = this.scene.add.text(cx - 240, rowY, labelStr, {
         fontSize: "12px", color: maxed ? "#556677" : "#a0e8ff",
         fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
         lineSpacing: 4,
