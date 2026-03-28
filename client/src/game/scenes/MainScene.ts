@@ -84,7 +84,7 @@ export default class MainScene extends Phaser.Scene {
       this.add.image(110, cam.height - 150, "compass")
         .setDisplaySize(200, 200)
         .setScrollFactor(0)
-        .setDepth(1)
+        .setDepth(15)
         .setAlpha(0.35);
 
       this.toast = new AchievementToast(this);
@@ -591,7 +591,7 @@ export default class MainScene extends Phaser.Scene {
       fontFamily: "monospace", backgroundColor: "#002233",
       padding: { x: 20, y: 10 }, align: "center",
       wordWrap: { width: cam.width * 0.8 },
-    }).setOrigin(0.5, 0);
+    }).setOrigin(0.5, 0).setDepth(50);
 
     this.activeEventTexts.push(text);
 
