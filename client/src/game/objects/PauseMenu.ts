@@ -58,7 +58,7 @@ export default class PauseMenu {
 
     const btnResume = this.makeButton(cx, cy - 120,  "▶  Resume",        "#44ff88", DEPTH + 3);
     const btnBadges = this.makeButton(cx, cy - 55,  "🏅  Badges",        "#ffcc44", DEPTH + 3);
-    const btnSave   = this.makeButton(cx, cy + 10,  "💾  Save Game",     "#66ccff", DEPTH + 3);
+    const btnSave   = this.makeButton(cx, cy + 10, "💾  Save & Exit", "#66ccff", DEPTH + 3);
     const btnLoad   = this.makeButton(cx, cy + 75, "📂  Load Game",   "#66ffcc", DEPTH + 3);
     const btnExit   = this.makeButton(cx, cy + 140, "🏠  Exit to Menu",  "#ffaa44", DEPTH + 3);
     const btnQuit   = this.makeButton(cx, cy + 205, "✖  Quit Game",      "#ff6666", DEPTH + 3);
@@ -94,12 +94,15 @@ export default class PauseMenu {
 
       try {
         await saveGame(currentUsername, gameState);
-        saveStatus.setColor("#44ff88").setText("✅ Game saved!");
+        saveStatus.setColor("#44ff88").setText("✅ Game saved! Returning to menu...");
+        this.scene.time.delayedCall(1000, () => {
+          window.location.reload();
+        });
       } catch {
         saveStatus.setColor("#ff4444").setText("❌ Error saving game");
+        this.scene.time.delayedCall(2000, () => saveStatus.setText(""));
       }
 
-      this.scene.time.delayedCall(2000, () => saveStatus.setText(""));
     });
 
     // Load button
