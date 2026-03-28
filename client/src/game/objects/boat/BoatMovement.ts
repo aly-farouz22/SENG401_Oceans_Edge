@@ -65,5 +65,12 @@ export default class BoatMovement {
       vx * SPEED * this.speedMultiplier,
       vy * SPEED * this.speedMultiplier
     );
+
+    // this will clamp the boat to the screen's boundary
+    const cam    = this.sprite.scene.cameras.main;
+    const margin = 20; 
+    this.sprite.x = Phaser.Math.Clamp(this.sprite.x, margin, cam.width  - margin);
+    this.sprite.y = Phaser.Math.Clamp(this.sprite.y, margin, cam.height - margin);
+    
   }
 }
