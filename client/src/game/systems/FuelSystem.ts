@@ -1,21 +1,15 @@
-// ─────────────────────────────────────────────────────────────────────────────
 // FuelSystem.ts
-//
-// Owns all fuel state. Pass to BoatMovement and MarketZone.
-//
-// Usage:
-//   const fuel = new FuelSystem();
-//   fuel.drain(delta);        // call each frame when moving
-//   fuel.canMove();           // false when empty
-//   fuel.refuel(economy);     // call from market
-// ─────────────────────────────────────────────────────────────────────────────
+// Owns all fuel state for the player's boat.
+// Designed to be created once on the Boat and then passed into
+// BoatMovement (which drains it) and MarketZone (which refuels it)
 
 import { EconomySystem } from "./EconomySystem";
 
-export const FUEL_MAX      = 100;
+export const FUEL_MAX      = 100;// Full tank size. also the starting amount
 export const FUEL_COST     = 20;   // $ to refuel at market
-// Medium drain: 100 units over ~90s of movement = ~1.11 per second
-const DRAIN_PER_SECOND     = 100 / 30;
+
+//Drain rate
+const DRAIN_PER_SECOND     = 100 / 30;//lasts 30seconds in concept
 
 export class FuelSystem {
   private _fuel = FUEL_MAX;
@@ -25,17 +19,20 @@ export class FuelSystem {
   get ratio()   { return this._fuel / FUEL_MAX; }
   get isEmpty() { return this._fuel <= 0; }
 
-  /** Call each frame the boat is actually moving, passing delta in ms. */
+  // Called every frame that the boat is actually moving (not just idling).
   drain(delta: number): void {
     this._fuel = Math.max(0, this._fuel - DRAIN_PER_SECOND * (delta / 1000));
   }
 
-  /** Returns false when out of fuel — BoatMovement should stop. */
+  // When it returns false, movement is blocked and onFuelEmpty fires in MainScene, which then teleports the boat to dock and subtract towing fee
   canMove(): boolean {
     return this._fuel > 0;
   }
 
-  /** Buy a full tank. Returns true if purchase succeeded. */
+
+// Attempts to purchase a full refuel at the market dock.
+  // Checks two things before spending: is the tank already full, and can
+  // the player actually afford it
   refuel(economy: EconomySystem): boolean {
     if (this._fuel >= FUEL_MAX) return false;          // already full
     if (!economy.canAfford(FUEL_COST)) return false;   // can't afford
@@ -44,7 +41,8 @@ export class FuelSystem {
     this._fuel = FUEL_MAX;
     return true;
   }
-
+  
+  // Used during save/load to restore the exact fuel level from the save file.
   setFuel(amount: number): void {
     this._fuel = Math.max(0, Math.min(FUEL_MAX, amount));
   }

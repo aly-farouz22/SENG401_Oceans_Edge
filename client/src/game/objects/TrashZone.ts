@@ -4,7 +4,7 @@ import FishingZone from "./FishingZone";
 
 const BAR_WIDTH           = 64;
 const BAR_HEIGHT          = 8;
-const POLLUTION_REDUCTION = 15;
+const POLLUTION_REDUCTION = 15;// How much pollution is reduced when a trash zone is fully cleaned
 const FISH_BOOST          = 10;
 const TRASH_STOCK         = 2;
 
@@ -116,6 +116,9 @@ export default class TrashZone extends Phaser.GameObjects.Zone {
     }).setOrigin(0.5, 1).setDepth(11).setVisible(false);
   }
 
+    //Called when the player's boat interacts with this trash zone.
+    //Decrements stock by 1. When stock hits 0, reduces pollution,
+    //boosts fish populations, fires onCleaned, and destroys the zone.
   collectTrash() {
     if (this._destroyed) return;
 
@@ -146,7 +149,7 @@ export default class TrashZone extends Phaser.GameObjects.Zone {
 
     this.ageMs += delta;
 
-    // ── Start seeping after delay ───────────────────────────────────────────
+    //Start seeping after delay
     if (!this.isSeeeping && this.ageMs >= SEEP_DELAY_MS) {
       this.isSeeeping  = true;
       this.nearestZone = this.findNearestFishingZone();
@@ -176,7 +179,7 @@ export default class TrashZone extends Phaser.GameObjects.Zone {
         (this.nearestZone as any).refreshBar?.();
       }
     } else if (this.isSeeeping) {
-      // Original zone gone — find next nearest
+      // Original zone gone, find next nearest
       this.nearestZone = this.findNearestFishingZone();
     }
   }
@@ -209,7 +212,8 @@ export default class TrashZone extends Phaser.GameObjects.Zone {
       },
     });
   }
-
+  
+//Immediately destroys the zone and all its visual elements.
   destroy(fromScene?: boolean) {
     if (this._destroyed) return;
     this._destroyed = true;

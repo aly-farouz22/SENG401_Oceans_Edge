@@ -4,6 +4,11 @@ import { FishCatch } from "../FishingZone";
 import MarketZone from "../MarketZone";
 import BoatUpgrade from "./BoatUpgrade";
 
+/*
+BoatInventory manages everything related to the player's fish storage.
+It tracks caught fish, enforces capacity limits, shows UI prompts
+above the boat, and handles the market interaction.
+*/
 export default class BoatInventory {
   private scene:       Phaser.Scene;
   private sprite:      Phaser.Physics.Arcade.Sprite;
@@ -40,6 +45,7 @@ export default class BoatInventory {
     this.sprite  = sprite;
     this.economy = economy ?? null;
 
+// Prompt shown above the boat when the player has fish but isn't at the dock
     this.marketPrompt = scene.add.text(0, 0, "Sail to dock to sell", {
       fontSize: "12px", color: "#ffdd88",
       stroke: "#332200", strokeThickness: 2, fontFamily: "monospace",
@@ -140,7 +146,7 @@ export default class BoatInventory {
     this.marketPrompt
       .setPosition(x, y + 20)
       .setVisible(!isAtMarket && this.fish.length > 0);
-
+// Detect the moment the boat arrives at the market (transition from not-at to at)
     if (isAtMarket && !this.atMarketLastFrame) {
       const zone = this.marketZones[0];
       if (zone && !zone.menuOpen) {
@@ -148,6 +154,8 @@ export default class BoatInventory {
       }
     }
 
+
+// Detect the moment the boat leaves the market — close the menu
     if (!isAtMarket && this.atMarketLastFrame) {
       this.marketZones.forEach(z => z.hideMenu());
     }

@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { FuelSystem } from "../../systems/FuelSystem";
 
+// Base movement speed of the boat in pixels per second
 const SPEED = 200;
 
 export default class BoatMovement {
@@ -8,7 +9,7 @@ export default class BoatMovement {
   private sprite:  Phaser.Physics.Arcade.Sprite;
   private keys:    { [key: string]: Phaser.Input.Keyboard.Key };
   public  speedMultiplier = 1;
-
+//Reference to the fuel system so movement can drain fuel
   fuelSystem?: FuelSystem;
   onFuelEmpty?: () => void;
 
@@ -26,11 +27,13 @@ export default class BoatMovement {
   }
 
   update(isFishing: boolean, delta = 16) {
+// Lock the boat in place while a fishing action is in progress
     if (isFishing) {
       this.sprite.setVelocity(0);
       return;
     }
 
+    // If the boat has no fuel, stop it and fire the out-of-fuel callback once
     if (this.fuelSystem && !this.fuelSystem.canMove()) {
       this.sprite.setVelocity(0);
       if (!this._fuelEmptyFired) {
@@ -56,11 +59,12 @@ export default class BoatMovement {
     }
 
     if (vx !== 0 || vy !== 0) {
+      // Rotate the boat sprite to face the direction it's moving
       const angle = Math.atan2(vy, vx) * Phaser.Math.RAD_TO_DEG;
       this.sprite.setAngle(angle - 90);
-      this.fuelSystem?.drain(delta);
+      this.fuelSystem?.drain(delta);  // Drain fuel each frame the boat is moving
     }
-
+// Apply the final velocity, scaled by speed and any upgrade multipliers
     this.sprite.setVelocity(
       vx * SPEED * this.speedMultiplier,
       vy * SPEED * this.speedMultiplier

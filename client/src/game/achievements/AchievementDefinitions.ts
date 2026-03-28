@@ -1,7 +1,6 @@
-// ─────────────────────────────────────────────────────────────────────────────
+
 // AchievementDefinitions.ts
 // Add / remove achievements here – no other file needs to change.
-// ─────────────────────────────────────────────────────────────────────────────
 
 export interface AchievementDefinition {
   id:          string;
@@ -9,19 +8,19 @@ export interface AchievementDefinition {
   description: string;
   icon:        string;       // emoji used in toasts / gallery
   category:    "catch" | "profit" | "survival" | "ecology" | "upgrades" | "ending";
-  /** Return true when this achievement should unlock */
+  //Return true when this achievement should unlock//
   check:       (stats: PlayerStats) => boolean;
 }
 
-/** All runtime stats the achievement system tracks.
- *  Add new fields here as the game grows – existing checks won't break. */
+
+ //Add new fields here as the game grows – existing checks won't break.//
 export interface PlayerStats {
   totalFishCaught:    number;
   rareFishCaught:     number;
   lifetimeEarnings:   number;
   seasonsCompleted:   number;
   trashZonesCleaned:  number;
-  totalTrashZones:    number;   // set this to the map's total so "clean all" works
+  totalTrashZones:    number;
   allUpgradesMaxed:   boolean;
   gameOverCount:      number;
   goodEndingReached:  boolean;
@@ -46,7 +45,7 @@ export const DEFAULT_STATS: PlayerStats = {
 };
 
 export const ACHIEVEMENTS: AchievementDefinition[] = [
-  // ── Catch milestones ────────────────────────────────────────────────────────
+  //Catch milestones
   {
     id: "first_catch",
     name: "First Cast",
@@ -96,7 +95,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
     check: s => s.rareFishCaught >= 10,
   },
 
-  // ── Profit milestones ───────────────────────────────────────────────────────
+  //Profit milestones
   {
     id: "profit_100",
     name: "First Profit",
@@ -122,7 +121,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
     check: s => s.lifetimeEarnings >= 2000,
   },
 
-  // ── Survival ─────────────────────────────────────────────────────────────────
+  //Survival
   {
     id: "survive_1",
     name: "Afloat",
@@ -156,7 +155,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
     check: s => s.recoveredFromNegative,
   },
 
-  // ── Ecology ─────────────────────────────────────────────────────────────────
+  //Ecology
   {
     id: "clean_first",
     name: "Eco Warrior",
@@ -174,7 +173,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
     check: s => s.totalTrashZones > 0 && s.trashZonesCleaned >= s.totalTrashZones,
   },
 
-  // ── Upgrades ────────────────────────────────────────────────────────────────
+  //Upgrades
   {
     id: "max_upgrades",
     name: "Fully Loaded",
@@ -184,7 +183,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
     check: s => s.allUpgradesMaxed,
   },
 
-  // ── Endings ─────────────────────────────────────────────────────────────────
+  //Endings
   {
     id: "game_over",
     name: "Rock Bottom",

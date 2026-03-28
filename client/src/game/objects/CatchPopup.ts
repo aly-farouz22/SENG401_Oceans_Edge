@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { FishCatch } from "./FishingZone";
-
+//just rarity colors
 const RARITY_COLORS: Record<string, string> = {
   common:     "#ffffff",
   uncommon:   "#44ff88",
@@ -35,7 +35,7 @@ const FISH_IMAGE_MAP: Record<string, string> = {
   "Water Bottle":   "trash_bottle",
   "Cigarette Buds": "trash_cigarette",
 };
-
+//pixel art size of fish
 const FISH_SCALE = 3;
 
 export default class CatchPopup {
@@ -113,7 +113,7 @@ export default class CatchPopup {
       fontFamily: "monospace", stroke: "#000", strokeThickness: 3,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
 
-    // ── Species warning tag ───────────────────────────────────────────────────
+    // Warning tag shown for endangered or invasive species
     let warningText: Phaser.GameObjects.Text | null = null;
     if (isEndangered) {
       warningText = this.scene.add.text(cx, cy + 162,
@@ -123,6 +123,8 @@ export default class CatchPopup {
         backgroundColor: "#2a0000", padding: { x: 12, y: 6 },
       }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
     } else if (isInvasive) {
+      // Purple tag encouraging the player to remove invasive species
+
       warningText = this.scene.add.text(cx, cy + 264,
         "☠  INVASIVE SPECIES  —  removing them helps the ocean!", {
         fontSize: "13px", fontStyle: "bold", color: "#cc44ff",
@@ -141,6 +143,7 @@ export default class CatchPopup {
       }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(202);
 
+    // Small hint at the bottom telling the player how to dismiss
     const hint = this.scene.add.text(cx, cy + PH / 2 - 22, "click anywhere to continue", {
       fontSize: "12px", color: "#445566", fontFamily: "monospace",
     }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
@@ -152,7 +155,8 @@ export default class CatchPopup {
     if (warningText) all.push(warningText);
 
     this.container = this.scene.add.container(0, 0, all).setDepth(200);
-
+  
+    // Fade everything in
     all.forEach(o => (o as any).setAlpha(0));
     this.scene.tweens.add({
       targets: all, alpha: 1, duration: 220, ease: "Cubic.easeOut",
@@ -173,7 +177,8 @@ export default class CatchPopup {
     const timer = this.scene.time.delayedCall(4000, () => this.dismiss());
     overlay.on("pointerdown", () => { timer.remove(); this.dismiss(); });
   }
-
+  //Fades out and destroys all popup elements.
+   //Called either by the auto dismiss timer or when the player clicks the overlay
   private dismiss() {
     if (!this.container) return;
     this.isShowing = false;

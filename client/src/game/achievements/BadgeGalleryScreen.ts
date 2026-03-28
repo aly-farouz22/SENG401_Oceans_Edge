@@ -1,8 +1,8 @@
 import Phaser from "phaser";
 import { ACHIEVEMENTS, AchievementDefinition } from "./AchievementDefinitions";
 import { AchievementManager } from "./AchievementManager";
-
-const DEPTH = 160;
+// Grid layout
+const DEPTH = 160; // Depth level, set a random high number for now
 const COLS  = 4;
 const CELL_W     = 110;
 const CELL_H     = 110;
@@ -10,6 +10,7 @@ const CELL_GAP_X = 12;
 const CELL_GAP_Y = 12;
 const PAD        = 24;
 
+// Border color for each achievement category
 const CATEGORY_COLORS: Record<string, number> = {
   catch:    0x44ccff,
   profit:   0x44ff88,
@@ -39,7 +40,7 @@ export default class BadgeGalleryScreen {
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
   }
-
+//builds and shows the gallery
   show(): void {
     this.build();
   }
@@ -243,7 +244,7 @@ export default class BadgeGalleryScreen {
     });
   }
 
-  // ── Tooltip ──────────────────────────────────────────────────────────────────
+  //Tooltip
   private tooltipBg?:   Phaser.GameObjects.Rectangle;
   private tooltipText?: Phaser.GameObjects.Text;
 
@@ -253,7 +254,7 @@ export default class BadgeGalleryScreen {
     const cam    = this.scene.cameras.main;
     const TW     = 180;
     const TH     = 50;
-    const DEPTH  = 200; // above everything
+    const DEPTH  = 200;
 
     // Flip above or below depending on space
     const tipY = y - CELL_H / 2 - TH / 2 - 6;
@@ -275,7 +276,6 @@ export default class BadgeGalleryScreen {
       align: "center",
     }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 1);
 
-    // Resize bg to fit text
     const bounds = this.tooltipText.getBounds();
     this.tooltipBg.setSize(TW, bounds.height + 16);
 
@@ -303,6 +303,8 @@ export default class BadgeGalleryScreen {
     });
   }
 
+   // Helper that registers a game object in allObjects and returns it.
+   // Used to keep track of everything that needs to be destroyed on close.
   private track<T extends Phaser.GameObjects.GameObject>(obj: T): T {
     this.allObjects.push(obj);
     return obj;

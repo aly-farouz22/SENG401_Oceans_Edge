@@ -52,38 +52,38 @@ export default class HUD {
     const row1 = H - BAR_H + 50;
     const row2 = H - BAR_H + 80;
 
-    // ── Money ─────────────────────────────────────────────────────────────────
+    //Money
     this.moneyText = scene.add.text(12, row1, "💰 $0", {
       fontSize: "15px", color: "#ffdd44", fontStyle: "bold",
       fontFamily: "monospace", stroke: "#000", strokeThickness: 3,
     }).setScrollFactor(0).setDepth(21);
 
-    // ── Season ────────────────────────────────────────────────────────────────
+    //Season
     this.seasonText = scene.add.text(12, row2, "🌿 Season 1 — Spring", {
       fontSize: "12px", color: "#aaffcc",
       fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
     }).setScrollFactor(0).setDepth(21);
 
-    // ── Inventory ─────────────────────────────────────────────────────────────
+    //Inventory
     this.inventoryText = scene.add.text(W / 2, row1, "🐟 Inventory: empty", {
       fontSize: "12px", color: "#a0e8ff",
       fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(21);
 
-    // ── Ecosystem ─────────────────────────────────────────────────────────────
+    //Ecosystem
     this.ecosystemText = scene.add.text(W / 2, row2, "🌊 Ecosystem: Healthy", {
       fontSize: "11px", color: "#a0ffaa",
       fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(21);
 
-    // ── Endangered counter ────────────────────────────────────────────────────
+    //Endangered counter
     this.endangeredText = scene.add.text(W - 200, row1,
       `🐠 Endangered: 0/${ENDANGERED_LIMIT}`, {
       fontSize: "12px", color: "#44ff88",
       fontFamily: "monospace", stroke: "#000", strokeThickness: 2,
     }).setScrollFactor(0).setDepth(21);
 
-    // ── Fuel bar sprite (top-left) ────────────────────────────────────────────
+    //Fuel bar sprite (top-left)
     const SCALE    = 4;
     const SPRITE_W = 98 * SCALE;
     const SPRITE_H = 34 * SCALE;
@@ -107,7 +107,7 @@ export default class HUD {
       barStartX, barCenterY, fuelBarW, fuelBarH, 0x44dd44
     ).setOrigin(0, 0.5).setScrollFactor(0).setDepth(23);
 
-    // ── Fuel empty warning ────────────────────────────────────────────────────
+    //Fuel empty warning
     this.fuelWarning = scene.add.text(
       W / 2, H / 2 - 100,
       "⛽ Out of fuel! Sail to the dock to refuel.", {
@@ -117,13 +117,13 @@ export default class HUD {
       }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(30).setVisible(false);
 
-    // ── Sell feedback ─────────────────────────────────────────────────────────
+    //Sell feedback
     this.sellFeedback = scene.add.text(W / 2, H / 2 - 60, "", {
       fontSize: "22px", fontStyle: "bold", fontFamily: "monospace",
       color: "#ffdd44", stroke: "#000", strokeThickness: 5,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(30).setVisible(false);
 
-    // ── Pause button (top-right) ──────────────────────────────────────────────
+    // Pause button (top-right)
     this.menuBtn = scene.add.image(W - 40, 40, "pause_btn")
       .setDisplaySize(56, 56)
       .setScrollFactor(0).setDepth(21)
@@ -132,7 +132,7 @@ export default class HUD {
       .on("pointerout",   function(this: Phaser.GameObjects.Image) { this.setAlpha(1); })
       .on("pointerdown",  () => this.onMenuOpen?.());
 
-    // ── Collection button ─────────────────────────────────────────────────────
+    //Collection button
     this.collectionBtn = scene.add.text(W - 100, 12, "📖", {
       fontSize: "22px", fontFamily: "monospace",
       stroke: "#000", strokeThickness: 2,

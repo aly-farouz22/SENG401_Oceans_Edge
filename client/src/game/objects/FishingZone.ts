@@ -10,7 +10,7 @@ export interface FishCatch {
   rarity: "common" | "uncommon" | "rare" | "legendary" | "trash";
   points: number;
 }
-
+// All catchable fish in the game
 const FISH_TABLE: FishCatch[] = [
   { name: "Anchovy Sprat",   ecosystemName: "Anchovy",   rarity: "common",    points: 15,  endangered: false, invasive: false, isJuvenile: false, amount: 1 },
   { name: "Haddock",         ecosystemName: "Haddock",   rarity: "common",    points: 15,  endangered: false, invasive: false, isJuvenile: false, amount: 1 },
@@ -23,7 +23,7 @@ const FISH_TABLE: FishCatch[] = [
   { name: "Lionfish",        ecosystemName: "Lionfish", rarity: "uncommon",  points: 20,  endangered: false, invasive: true,  isJuvenile: false, amount: 1 },
   { name: "Green Crab",      ecosystemName: "Crab", rarity: "common",    points: 8,   endangered: false, invasive: true,  isJuvenile: false, amount: 1 },
 ];
-
+//Trash items that can be caught
 const TRASH_TABLE: FishCatch[] = [
   { name: "Water Bottle",   rarity: "trash", points: 0, endangered: false, invasive: false, isJuvenile: false, amount: 1 },
   { name: "Cigarette Buds", rarity: "trash", points: 0, endangered: false, invasive: false, isJuvenile: false, amount: 1 },
@@ -31,12 +31,15 @@ const TRASH_TABLE: FishCatch[] = [
 
 const RARITY_WEIGHTS = { common: 40, uncommon: 30, rare: 20, legendary: 10 };
 
+// Visual dimensions for the stock bar shown above each fishing zone
 const BAR_WIDTH      = 64;
 const BAR_HEIGHT     = 8;
+
 const MAX_STOCK      = 6;
 const DEPLETE_AMOUNT = 1;
 const BASE_REGEN     = 0.04;  // base regen per second — scaled by ProgressionSystem
-const FADE_DURATION  = 800;
+const FADE_DURATION  = 800; // How long the fade out animation takes when a zone is depleted (ms)
+
 
 export default class FishingZone extends Phaser.GameObjects.Zone {
   private label:    Phaser.GameObjects.Text;
@@ -71,8 +74,7 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
     const radius = Math.min(width, height) / 2;
     this.barY    = y - radius - 22;
 
-    // ── FishingZone sprite (replaces glowCircle) ──────────────────────────────
-    // Compute scale to reach 1.5x zone size from actual texture dimensions
+    // FishingZone sprite
     const texW       = scene.textures.get("fishing_zone").getSourceImage().width  || 1;
     const texH       = scene.textures.get("fishing_zone").getSourceImage().height || 1;
     const baseScaleX = (width  * 1.5) / texW;
@@ -82,8 +84,7 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
       .setScale(baseScaleX, baseScaleY)
       .setDepth(4)
       .setAlpha(0.85);
-
-    // Gentle pulse like the old glow circle
+    //glow effect for fishing zone
     scene.tweens.add({
       targets: this.sprite,
       alpha:  { from: 0.55, to: 0.95 },
@@ -100,10 +101,12 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
     this.barBg = scene.add.rectangle(x, this.barY, BAR_WIDTH, BAR_HEIGHT, 0x112233)
       .setDepth(9);
 
+    // Green fill that shrinks as stock depletes
     this.barFill = scene.add.rectangle(
       x - BAR_WIDTH / 2, this.barY, BAR_WIDTH, BAR_HEIGHT, 0x00dd88
     ).setOrigin(0, 0.5).setDepth(10);
 
+    // Warning text shown when the zone is empty
     this.emptyText = scene.add.text(x, this.barY - 10, "⚠ Depleted", {
       fontSize: "11px", color: "#ff6644",
       stroke: "#220000", strokeThickness: 2, fontFamily: "monospace",
@@ -147,11 +150,12 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
     if (this.isEmpty || this._destroyed) return null;
 
     let result: FishCatch | null = null;
-
+    // Higher pollution = higher chance of pulling up trash instead of fish
     const trashChance = (this.pollutionLevel / 100) * 40;
     if (Phaser.Math.Between(1, 100) <= trashChance) {
       result = TRASH_TABLE[Phaser.Math.Between(0, TRASH_TABLE.length - 1)];
     } else {
+       // Roll a number 1–100 and walk through cumulative rarity weights
       const roll = Phaser.Math.Between(1, 100);
       let cumulative = 0;
       let rarity: keyof typeof RARITY_WEIGHTS = "common";
@@ -161,10 +165,12 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
         if (roll <= cumulative) { rarity = r; break; }
       }
 
+      // Pick a random fish from all fish matching the rolled rarity
       const pool = FISH_TABLE.filter(f => f.rarity === rarity);
       result = pool.length ? pool[Phaser.Math.Between(0, pool.length - 1)] : null;
     }
 
+    // Invasive species don't count against the zone
     if (!result?.invasive) {
       this.stock = Math.max(0, this.stock - DEPLETE_AMOUNT);
       this.refreshBar();
@@ -200,6 +206,7 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
     const pct = this.stock / MAX_STOCK;
     this.barFill.setDisplaySize(BAR_WIDTH * pct, BAR_HEIGHT);
 
+    // Interpolate bar color: red at empty, yellow at half, green at full
     const color = pct > 0.5
       ? Phaser.Display.Color.Interpolate.ColorWithColor(
           Phaser.Display.Color.ValueToColor(0xffdd00),
@@ -220,6 +227,9 @@ export default class FishingZone extends Phaser.GameObjects.Zone {
     this.sprite.setAlpha(0.3 + 0.65 * pct);
     this.emptyText.setVisible(this.isEmpty);
   }
+
+   //Immediately destroys the zone and all its visual elements.
+   // Used when the scene shuts down or a zone needs to be removed instantly
 
   destroy(fromScene?: boolean) {
     if (this._destroyed) return;

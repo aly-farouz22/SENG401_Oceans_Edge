@@ -17,6 +17,16 @@ import { EventSystem } from "../systems/EventSystem";
 import ObjectiveSystem from "../systems/ObjectiveSystem";
 import { currentUsername } from "./BootScene";
 
+/*MainScene is the core gameplay scene. It sets up and coordinates every
+major system:
+-the boat
+-fishing zones
+-economy
+-ecosystem
+-events
+-achievements
+-HUD. 
+It also handles saving/loading game state.*/
 export default class MainScene extends Phaser.Scene {
   private boat!:          Boat;
   private hud!:           HUD;
@@ -35,6 +45,8 @@ export default class MainScene extends Phaser.Scene {
 
   constructor() { super("MainScene"); }
 
+  // Preload all image assets used in the game.
+  // Phaser needs these loaded before create() runs
   preload() {
     this.load.image("boat",           "/assets/Boat.png");
     this.load.image("fish_anchovy",   "/assets/Anchovy_Sprat_Common.png");
@@ -98,6 +110,8 @@ export default class MainScene extends Phaser.Scene {
       this.economy.addRevenue(0);
 
       // Apply saved economy and ecosystem state
+      // If loading a save, overwrite the fresh default values with the
+      // values from the save file (money, pollution, fish populations, etc.)
       if (savedState) {
         if (typeof savedState.money         === "number") this.economy.getState().balance            = savedState.money;
         if (typeof savedState.coralHealth   === "number") this.ecosystem.getState().coralHealth      = savedState.coralHealth;
@@ -124,6 +138,7 @@ export default class MainScene extends Phaser.Scene {
         new FishingZone(this, 700, 200, 120, 120, "Deep Waters"),
       ];
 
+      // One market dock where the player sells fish and buys upgrades (key aspect).
       this.marketZones = [
         new MarketZone(this, 880, 120, 120, 80, "Market Dock"),
       ];
@@ -138,7 +153,7 @@ export default class MainScene extends Phaser.Scene {
         this.seasonManager.season     = savedState.season;
         this.seasonManager.seasonName = this.getSeasonName(savedState.season);
       }
-
+      // Create the player boat and connect it to the game systems. This is our player
       this.boat = new Boat(this, 500, 384, this.ecosystem, this.economy);
       this.boat.registerZones(this.fishingZones);
       this.boat.registerMarketZones(this.marketZones);
@@ -154,13 +169,14 @@ export default class MainScene extends Phaser.Scene {
           this.boat.setPosition(savedState.boatX, savedState.boatY);
         }
         if (Array.isArray(savedState.fish))      savedState.fish.forEach((f: any) => this.boat.inventory.addFish(f));
-        if (Array.isArray(savedState.goneZones)) {
+        if (Array.isArray(savedState.goneZones)) {// Destroy the zones that were depleted/gone in the save.
           savedState.goneZones.forEach((gone: boolean, i: number) => {
             if (gone && this.fishingZones[i]) {
               this.fishingZones[i].destroy();
             }
           });
         }
+        // Restore the fish stock levels for zones that are still active.
         if (Array.isArray(savedState.zoneStocks)) {
           savedState.zoneStocks.forEach((stock: number, i: number) => {
             if (this.fishingZones[i] && !this.fishingZones[i].isGone) {
@@ -169,6 +185,8 @@ export default class MainScene extends Phaser.Scene {
             }
           });
         }
+
+        // Recreate any extra fishing zones that had been spawned mid game.
         if (Array.isArray(savedState.spawnedZones)) {
           savedState.spawnedZones.forEach((sz: any) => {
             const zone = new FishingZone(this, sz.x, sz.y, sz.size, sz.size, sz.name);
@@ -178,7 +196,10 @@ export default class MainScene extends Phaser.Scene {
           });
           this.boat.registerZones(this.fishingZones);
           this.seasonManager.registerZones(this.fishingZones);
-        }
+        } 
+        
+        // Recreate any trash zones that existed when the game was saved,
+        // restoring their age and seeping state so they continue behaving correctly
         if (Array.isArray(savedState.trashZones)) {
           savedState.trashZones.forEach((tz: any) => {
             const zone = new TrashZone(this, tz.x, tz.y, 100, 100, this.ecosystem);
@@ -201,30 +222,36 @@ export default class MainScene extends Phaser.Scene {
                 logChoice(currentUsername, "cleaned_trash", { season: this.seasonManager.season });
               }
             };
+                // Re register the full list so the boat can interact with the new zone.
             this.boat.registerTrashZones(this.trashZones);
           });
         }
       }
-
+//This sets up the HUD/UI
       this.hud = new HUD(this);
       this.hud.registerFuel(this.boat.fuelSystem);
+      
+      // Restore the endangered catch counter and fish collection log from save.
       if (savedState && typeof savedState.endangeredCount === "number") {
         this.hud.endangeredCaught = savedState.endangeredCount;
       }
       if (savedState && Array.isArray(savedState.caughtCollection)) {
         this.hud.caughtCollection = savedState.caughtCollection;
-      }
+      } 
+      
+      // If the player catches too many endangered fish, trigger an instant game over.
+      //ONE OF OUR GAME OVERS
       this.hud.onEndangeredLimit = () => {
         this.hasGameEnded = true;
         if (currentUsername) saveGame(currentUsername, { gameOver: true, gameOverReason: "You caught too many endangered species!" });
         this.showGameOverScreen("You caught too many endangered species!");
       };
-
+      //Pause Menu
       this.pauseMenu = new PauseMenu(this);
       this.hud.onMenuOpen = () => this.pauseMenu.open();
       this.pauseMenu.onResume = () => {};
-      this.pauseMenu.onExitToMenu = () => { this.scene.restart(); };
-      this.pauseMenu.getGameState = () => ({
+      this.pauseMenu.onExitToMenu = () => { this.scene.restart(); }; //this will return player to main menu
+      this.pauseMenu.getGameState = () => ({//snap shot of the game for save purposes
         money:          this.economy.getBalance(),
         season:         this.seasonManager.season,
         coralHealth:    this.ecosystem.getState().coralHealth,
@@ -259,12 +286,13 @@ export default class MainScene extends Phaser.Scene {
       });
 
       // Towing fee
+      //Mechanic happens when player runs out of fuel
       this.boat.boatMovement.onFuelEmpty = () => {
-        const TOWING_FEE = 300;
+        const TOWING_FEE = 300; //charging fee, can be changed later on
         this.economy.getState().balance       -= TOWING_FEE;
         this.economy.getState().totalExpenses += TOWING_FEE;
         const dock = this.marketZones[0];
-        this.boat.setPosition(dock.x, dock.y + 100);
+        this.boat.setPosition(dock.x, dock.y + 100);//teleports to dock/marketzone
         this.showEvent("🚤 Towed to Dock",
           `You ran out of fuel and were towed back for $${TOWING_FEE}!`);
       };
@@ -283,10 +311,12 @@ export default class MainScene extends Phaser.Scene {
         }
       };
 
+      // When the event system decides to spawn a trash zone, place it on the map. TRASH ZONE SPAWNER
       this.eventSystem.onSpawnTrash = (x, y) => { this.spawnTrashZone(x, y); };
 
+      //Updates season objectives, achievements, and save when player sells a fish
       this.boat.onSell = (earned, count) => {
-        AchievementManager.instance.updateStats({ lifetimeEarnings: earned });
+        AchievementManager.instance.updateStats({ lifetimeEarnings: earned });//achievement for selling fish
         this.objectives.updateStats({ moneyEarned: earned });
         this.hud.showSellFeedback(earned, count);
 
@@ -327,16 +357,19 @@ export default class MainScene extends Phaser.Scene {
         }
       };
 
+// It shows the season summary screen, deducts costs, handles bankruptcy,
+// evaluates objectives, fires random events, and advances to the next season
       this.boat.onEndSeason = (earned, count) => {
         const econState = this.economy.getState();
         const season    = this.seasonManager.season;
 
+        // Costs scale up each season to increase difficulty over time. Can change any time for balancing difficulty
         const scaledFuelCost        = econState.fuelCost + (season - 1) * 5;
         const scaledLicenseFee      = 20 + (season - 1) * 10;
         const scaledMaintenanceCost = econState.maintenanceCost + (season - 1) * 10;
         const totalCosts            = scaledFuelCost + scaledLicenseFee + scaledMaintenanceCost;
 
-        const screen = new SeasonEndScreen(this);
+        const screen = new SeasonEndScreen(this);// Show the season summary screen with an earnings/expense breakdown.
         screen.show({
           earnings:        earned,
           fuelCost:        scaledFuelCost,
@@ -345,10 +378,13 @@ export default class MainScene extends Phaser.Scene {
           currentBalance:  econState.balance,
         });
 
+        // This runs after the player clicks "Continue" on the summary screen.
         screen.onComplete = (canContinue) => {
           econState.balance += earned;
           econState.balance -= totalCosts;
 
+          // If the player can't afford this season's costs, it's game over.
+          //ONE GAME OVER OPTION
           if (econState.balance < 0) {
             AchievementManager.instance.updateStats({ gameOverCount: 1 });
             this.hasGameEnded = true;
@@ -370,6 +406,8 @@ export default class MainScene extends Phaser.Scene {
           this.objectives.evaluateSeason(canContinue);
 
           AchievementManager.instance.updateStats({ seasonsCompleted: 1 });
+
+          // If the player was in debt before earnings arrived, reward recovery. not tested yet
           if (econState.balance - earned + totalCosts < 0) {
             AchievementManager.instance.updateStats({ recoveredFromNegative: true });
           }
@@ -381,6 +419,7 @@ export default class MainScene extends Phaser.Scene {
           const crisis = this.eventSystem.checkLowPopulationEvent();
           if (crisis) this.showEvent(crisis.title, crisis.description);
 
+          // Move the season counter forward and give the player a free refuel.
           this.seasonManager.advanceSeason();
           this.boat.fuelSystem.refuelFree();
 
@@ -390,7 +429,7 @@ export default class MainScene extends Phaser.Scene {
             this.spawnFishingZone();
           }
 
-          // Spawn extra trash zones each season
+          // Trash zones accumulate over time — cap extra spawns at 3 per season.
           const extraTrash = Math.min(Math.floor(this.seasonManager.season / 2), 3);
           for (let t = 0; t < extraTrash; t++) {
             const tx = Phaser.Math.Between(80, this.cameras.main.width  - 80);
@@ -400,7 +439,8 @@ export default class MainScene extends Phaser.Scene {
           AchievementManager.instance.updateStats({
             totalTrashZones: 3 + this.trashZones.length,
           });
-
+          
+          // Auto-save after the season transition and log the completion event.
           if (currentUsername) {
             saveGame(currentUsername, {
               money:          this.economy.getBalance(),

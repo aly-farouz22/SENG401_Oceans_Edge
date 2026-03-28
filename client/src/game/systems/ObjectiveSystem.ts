@@ -1,17 +1,5 @@
-// ─────────────────────────────────────────────────────────────────────────────
 // ObjectiveSystem.ts
-//
 // Owns all per-season and long-term objectives.
-//
-// Usage:
-//   const obj = new ObjectiveSystem();
-//   obj.startSeason(1);
-//   obj.updateStats({ moneyEarned: 50 });
-//   obj.getSeasonObjectives();   // current season's objectives + status
-//   obj.getLongTermObjectives(); // cross-season objectives + status
-//   obj.evaluateSeason();        // call at season end — returns pass/fail per objective
-// ─────────────────────────────────────────────────────────────────────────────
-
 export interface Objective {
   id:          string;
   label:       string;
@@ -24,13 +12,14 @@ export interface Objective {
   isAvoid:     boolean;   // true = fail if current > 0
 }
 
+// Stats tracked within a single season. Reset to zero at the start of each season.
 export interface SeasonStats {
   moneyEarned:         number;  // fish sales this season
   ecosystemHealth:     number;  // current coral health %
   trashZonesCleaned:   number;  // cleaned this season
   endangeredCaught:    number;  // endangered fish caught this season
 }
-
+// Used to drive long term objectives and achievement progress.
 export interface LongTermStats {
   consecutiveSeasons:       number;  // seasons survived without going negative
   totalTrashCleaned:        number;  // all-time trash zones cleaned
@@ -101,7 +90,7 @@ export default class ObjectiveSystem {
       label:  o.label,
       passed: o.isAvoid ? !o.failed : o.completed,
     }));
-
+    // seasonPassed is only true if every single objective passed.
     const seasonPassed = results.every(r => r.passed);
     return { seasonPassed, results };
   }
@@ -111,8 +100,7 @@ export default class ObjectiveSystem {
   getSeasonStats():        SeasonStats { return { ...this.seasonStats }; }
   getLongTermStats():      LongTermStats { return { ...this.longTermStats }; }
 
-  // ── Build objectives ────────────────────────────────────────────────────────
-
+  // Generates the four per-season objectives, scaling targets with season number.
   private buildSeasonObjectives(season: number): Objective[] {
     const moneyTarget     = Math.round(150 * Math.pow(1.2, season - 1));
     const ecoThreshold    = Math.max(40, 70 - (season - 1) * 4);
@@ -165,7 +153,7 @@ export default class ObjectiveSystem {
       },
     ];
   }
-
+  // Builds the three long term objectives that track progress across the whole run.
   private buildLongTermObjectives(): Objective[] {
     const lt = this.longTermStats;
     return [
@@ -253,7 +241,7 @@ export default class ObjectiveSystem {
       }
     }
   }
-
+  // Returns a zeroed out SeasonStats object used to reset state at season start.
   private blankSeasonStats(): SeasonStats {
     return { moneyEarned: 0, ecosystemHealth: 100, trashZonesCleaned: 0, endangeredCaught: 0 };
   }

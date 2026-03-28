@@ -2,7 +2,8 @@ export interface FishPrice {
     name: string;
     value: number;
 }
-
+// The full snapshot of the player's financial situation at any point in time.
+// This is what gets saved and passed around to other systems.
 export interface EconomyState {
     balance: number;
     totalEarnings: number;
@@ -16,7 +17,9 @@ export interface EconomyState {
     storageUpgradePurchased: boolean;
     fishPrices: FishPrice[];
 }
-
+/*EconomySystem manages all money-related logic: earning from fish sales, deducting trip and seasonal costs, and purchasing upgrades.
+Other systems (MainScene, Boat, MarketZone) call into this rather than
+touching the balance directly, so all financial logic stays in one place.*/
 export class EconomySystem {
     private state: EconomyState;
 

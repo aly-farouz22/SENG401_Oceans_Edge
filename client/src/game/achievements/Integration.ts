@@ -38,7 +38,7 @@ AchievementManager.instance.updateStats({ hadNegativeBalance: true });
 AchievementManager.instance.updateStats({ recoveredFromNegative: true });
 
 
-// ── 3. Season end (wire into SeasonEndScreen.show()) ─────────────────────────
+// ── 3. Season end
 
 // After calculating `net` and before showing the summary:
 if (net < 0) {
@@ -48,25 +48,8 @@ if (net < 0) {
 }
 
 
-// ── 4. Good ending ────────────────────────────────────────────────────────────
+//4. Good ending
 
 AchievementManager.instance.updateStats({ goodEndingReached: true });
 
-
-// ── 5. Querying for a gallery screen ─────────────────────────────────────────
-
 const all = AchievementManager.instance.getAll();
-// all[i].unlocked === true/false  →  show gold vs silhouette in your UI
-
-
-// ── 6. Swapping to a real backend ────────────────────────────────────────────
-//
-// In AchievementManager.ts, change:
-//
-//   new LocalAchievementStorage()
-//
-// to:
-//
-//   new ApiAchievementStorage(userId, "https://your-api.com")
-//
-// That's it. No other changes needed.

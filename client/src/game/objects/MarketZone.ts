@@ -3,13 +3,23 @@ import { EconomySystem } from "../systems/EconomySystem";
 import { FUEL_COST, FuelSystem } from "../systems/FuelSystem";
 import { FishCatch } from "./FishingZone";
 import BoatUpgrade from "./boat/BoatUpgrade";
-
+// The action the player selected from the market menu, will be used to determine what marketzone does
 export type MarketChoice = "sell" | "upgrade" | "end_season" | "cancel";
+/*
+  MarketZone is the harbour/dock area on the map where the player can:
+  - Sell all fish in their inventory for money
+  - Buy fuel to keep the boat moving
+  - Purchase boat upgrades
+  - End the current season and trigger the season summary screen
 
+  The menu opens automatically when the boat sails into the zone,
+  and closes when the boat leaves or the player clicks Cancel.
+ */
 export default class MarketZone extends Phaser.GameObjects.Zone {
   private sprite:     Phaser.GameObjects.Image;
   private label:      Phaser.GameObjects.Text;
 
+  //Main market menu UI elements
   private overlay!:      Phaser.GameObjects.Rectangle;
   private panel!:        Phaser.GameObjects.Rectangle;
   private panelBorder!:  Phaser.GameObjects.Rectangle;
@@ -62,15 +72,22 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     this.buildUpgradePanel(scene);
   }
 
+/*Registers the boat upgrade system so the upgrade panel can
+display current levels and handle purchases.*/
   registerUpgrades(boatUpgrade: BoatUpgrade) {
     this.boatUpgrade = boatUpgrade;
   }
 
+/* Registers the fuel system and economy so the fuel button
+can deduct money and refill the tank.*/
   registerFuel(fuelSystem: FuelSystem, economy: EconomySystem) {
     this.fuelSystem = fuelSystem;
     this.economy    = economy;
   }
 
+/* Builds the main market menu UI — all elements start hidden.
+The overlay, panel, buttons, and subtitle are created once
+and reused every time the menu opens. */
   private buildOverlay(scene: Phaser.Scene) {
     const cam = scene.cameras.main;
     const cx = cam.width / 2;
@@ -99,8 +116,9 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
 
     this.divider = scene.add.rectangle(cx, cy - PH / 2 + 90, PW - 40, 1, 0xffcc44, 0.4)
       .setScrollFactor(0).setDepth(DEPTH + 3).setVisible(false);
-
-    const spacing = 55;
+    
+      // Action buttons
+    const spacing = 55; //spacing for buttons
     const startY  = cy - 80;
     this.btnSell      = this.makeButton(scene, cx, startY,                  "💰  Sell Fish",         "#44ff88", DEPTH + 3);
     this.btnFuel      = this.makeButton(scene, cx, startY + spacing,        `⛽  Buy Fuel  ($${FUEL_COST})`, "#ffcc44", DEPTH + 3);
@@ -167,7 +185,7 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     this.btnCancel.on("pointerdown",    () => { this.hideMenu(); this.onChoice?.("cancel",     inventory); });
     this.btnUpgrade.on("pointerdown",   () => { this.showUpgradePanel(inventory); });
 
-    // ── Fuel button ──────────────────────────────────────────────────────────
+    //Fuel button
     this.btnFuel.on("pointerdown", () => {
       if (!this.fuelSystem || !this.economy) return;
       const ok = this.fuelSystem.refuel(this.economy);
@@ -187,13 +205,18 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     all.forEach(el => el.setVisible(true).setAlpha(0));
     this.scene.tweens.add({ targets: all, alpha: 1, duration: 200, ease: "Cubic.easeOut" });
   }
-
+    /*
+Hides the main market menu and shows the upgrade sub-panel.
+   Dynamically generates one row per upgrade showing its current level,
+   description, next cost, and a Buy or MAX button.
+   Rebuilds from scratch each time so levels are always up to date.*/
   private showUpgradePanel(inventory: FishCatch[]) {
     const mainAll = [this.overlay, this.panel, this.panelBorder, this.titleText,
                      this.subtitleText, this.divider, this.btnSell, this.btnFuel,
                      this.btnUpgrade, this.btnEndSeason, this.btnCancel];
     mainAll.forEach(el => el.setVisible(false));
 
+    // Destroy old upgrade rows before rebuilding
     this.upgradeItems.forEach(t => t.destroy());
     this.upgradeBtns.forEach(t => t.destroy());
     this.upgradeItems = [];
@@ -219,6 +242,7 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
         lineSpacing: 4,
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(DEPTH).setAlpha(0);
 
+      // Buy button on the right — shows MAX if the upgrade is fully levelled
       const buyBtn = this.makeButton(this.scene, cx + 160, rowY,
         maxed ? "MAX" : "Buy",
         maxed ? "#445566" : "#44ff88", DEPTH);
@@ -228,8 +252,9 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
           const ok = this.boatUpgrade?.purchaseUpgrade(u.name);
           if (ok) {
             this.showUpgradePanel(inventory);
-          } else {
-            buyBtn.setColor("#ff4444");
+          } else {  
+  
+            buyBtn.setColor("#ff4444"); // Flash red if the player can't afford it
             this.scene.time.delayedCall(400, () => buyBtn.setColor("#44ff88"));
           }
         });
@@ -238,7 +263,8 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
       this.upgradeItems.push(infoText);
       this.upgradeBtns.push(buyBtn);
     });
-
+  
+    // Back button returns the player to the main market menu
     this.upgradeBackBtn.removeAllListeners("pointerdown");
     this.upgradeBackBtn.on("pointerdown", () => {
       this.hideUpgradePanel();
@@ -261,7 +287,10 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
                  ...this.upgradeItems, ...this.upgradeBtns];
     all.forEach(el => el.setVisible(false));
   }
-
+/*
+Closes the market menu with a fade-out animation.
+Also hides the upgrade panel if it was open.
+Does nothing if the menu is already closed.*/
   hideMenu() {
     if (!this._menuOpen) return;
     this._menuOpen = false;
@@ -275,10 +304,13 @@ export default class MarketZone extends Phaser.GameObjects.Zone {
     });
   }
 
+//Calculates the total sell value of all fish in the given inventory.
+//Used as a helper when processing a sell action.
   sellAll(inventory: FishCatch[]): number {
     return inventory.reduce((sum, f) => sum + f.points, 0);
   }
-
+ 
+  //Destroys all visual elements belonging to this zone.
   destroy(fromScene?: boolean) {
     this.sprite?.destroy();
     this.label?.destroy();

@@ -6,7 +6,8 @@ export interface EventResult {
   title: string;
   description: string;
 }
-
+// EventSystem fires random world events at the end of each season and
+// checks for ongoing ecological crises
 export class EventSystem {
   private economy: EconomySystem;
   private ecosystem: EcosystemSystem;
@@ -17,7 +18,8 @@ export class EventSystem {
     this.economy = economy;
     this.ecosystem = ecosystem;
   }
-
+// Rolls a random number and fires one of six possible events
+// Called by MainScene once per season after the summary screen is dismissed.
   public triggerRandomEvent(): EventResult | null {
     const roll = Math.random();
     let result: EventResult | null = null;
@@ -73,14 +75,16 @@ export class EventSystem {
 
     return result;
   }
-
+  //If a species is found below the threshold (population < 50):
+  //Its regeneration rate is permanently reduced by 0.01
   public checkLowPopulationEvent(): EventResult | null {
-    const POPULATION_THRESHOLD = 50;
+    const POPULATION_THRESHOLD = 50;// Species below this are considered at-risk
 
     const lowFish = this.ecosystem.getLowPopulationSpecies(POPULATION_THRESHOLD);
 
     if (!lowFish) return null;
 
+    // Slow the struggling species' recovery. Also damages environment
     this.ecosystem.changeSpeciesRegeneration(lowFish.name, -0.01);
     this.ecosystem.damageCoral(10);
 

@@ -27,9 +27,9 @@ import {
 } from "./AchievementDefinitions";
 
 import {
+  DbAchievementStorage,
   IAchievementStorage,
   LocalAchievementStorage,
-  DbAchievementStorage,
 } from "./AchievementStorage";
 
 export class AchievementManager {
@@ -39,7 +39,6 @@ static get instance(): AchievementManager {
   if (!AchievementManager._instance) {
     AchievementManager._instance = new AchievementManager(
       new LocalAchievementStorage()
-      // Swapped to DbAchievementStorage once username is known
     );
   }
   return AchievementManager._instance;
@@ -69,7 +68,6 @@ async init(): Promise<void> {
   this.ready = true;
 }
 
-// switch to database storage when username is known
 async switchToDbStorage(username: string): Promise<void> {
   this.storage = new DbAchievementStorage(username);
   this.ready   = false;
@@ -128,7 +126,7 @@ forceUnlock(achievementId: string): void {
   this.doUnlock(def);
 }
 
-/** Reset everything – useful for "new game". */
+//Reset everything – useful for "new game"
 async reset(): Promise<void> {
   this.unlocked = new Set();
   this.stats    = { ...DEFAULT_STATS };
