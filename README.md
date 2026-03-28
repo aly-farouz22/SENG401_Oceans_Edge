@@ -2,11 +2,14 @@ The game explores the sustainability challenges described in United Nations Sust
 focuses on protecting and sustainably managing marine ecosystems that are essential for climate regulation, biodiversity,
 and human livelihoods.
 
+The application is deployed and accessible here:  
+https://seng-401-oceans-edge.vercel.app/
+
 This project is divided into two main parts:
 - `server` - Backend service
 - `client` - Frontend application
 
-The following steps must be followed to successfully run the game:
+The following steps must be followed to successfully run the game locally:
 
 ## Prerequisites
 
