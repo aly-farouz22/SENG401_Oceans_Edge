@@ -151,9 +151,16 @@ export default class MainScene extends Phaser.Scene {
         if (savedState.upgradeLevels) this.boat.upgrades.restoreLevels(savedState.upgradeLevels);
         if (typeof savedState.fuel === "number") this.boat.fuelSystem.setFuel(savedState.fuel);
         if (Array.isArray(savedState.fish))      savedState.fish.forEach((f: any) => this.boat.inventory.addFish(f));
+        if (Array.isArray(savedState.goneZones)) {
+          savedState.goneZones.forEach((gone: boolean, i: number) => {
+            if (gone && this.fishingZones[i]) {
+              this.fishingZones[i].destroy();
+            }
+          });
+        }
         if (Array.isArray(savedState.zoneStocks)) {
           savedState.zoneStocks.forEach((stock: number, i: number) => {
-            if (this.fishingZones[i]) {
+            if (this.fishingZones[i] && !this.fishingZones[i].isGone) {
               this.fishingZones[i].stock = stock;
               this.fishingZones[i].refreshBar();
             }
@@ -224,6 +231,7 @@ export default class MainScene extends Phaser.Scene {
         fuel:           this.boat.fuelSystem.fuel,
         fish:           this.boat.fish,
         zoneStocks:      this.fishingZones.map(z => z.currentStock),
+        goneZones:      this.fishingZones.slice(0, 2).map(z => z.isGone),
         spawnedZones:   this.fishingZones.slice(2).filter(z => !z.isGone).map(z => ({
           x:     z.x,
           y:     z.y,
@@ -288,6 +296,7 @@ export default class MainScene extends Phaser.Scene {
             fuel:           this.boat.fuelSystem.fuel,
             fish:           this.boat.fish,
             zoneStocks:      this.fishingZones.map(z => z.currentStock),
+            goneZones:      this.fishingZones.slice(0, 2).map(z => z.isGone),
             spawnedZones:  this.fishingZones.slice(2).filter(z => !z.isGone).map(z => ({
               x:     z.x,
               y:     z.y,
@@ -396,6 +405,7 @@ export default class MainScene extends Phaser.Scene {
               fuel:           this.boat.fuelSystem.fuel,
               fish:           this.boat.fish,
               zoneStocks:      this.fishingZones.map(z => z.currentStock),
+              goneZones:      this.fishingZones.slice(0, 2).map(z => z.isGone),
               spawnedZones:  this.fishingZones.slice(2).filter(z => !z.isGone).map(z => ({
                 x:     z.x,
                 y:     z.y,
